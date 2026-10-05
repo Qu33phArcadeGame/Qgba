@@ -37,7 +37,7 @@ void uiPalette(void) {
         [C_PANEL] = RGB15(2, 2, 4), [C_PANELLINE] = RGB15(9, 9, 12), [C_TOAST] = RGB15(3, 3, 1), [C_SHINE] = RGB15(15, 15, 15),
         [C_FR] = RGB15(26, 3, 5), [C_FB] = RGB15(2, 6, 18), [C_FG] = RGB15(2, 16, 8), [C_FY] = RGB15(31, 26, 0),
         [C_FO] = RGB15(31, 16, 2), [C_FL] = RGB15(4, 12, 28), [C_MGREEN] = RGB15(6, 28, 8), [C_MRED] = RGB15(31, 6, 6),
-        [C_MBLUE] = RGB15(8, 12, 31), [C_POWER] = RGB15(31, 31, 31), [C_NIB] = RGB15(31, 28, 6), [C_PWDARK] = RGB15(5, 5, 5),
+        [C_MBLUE] = RGB15(8, 12, 31), [C_POWER] = RGB15(31, 31, 31), [C_NIB] = RGB15(31, 28, 6), [C_PWDARK] = RGB15(1, 1, 1),
         [C_PWOFF] = RGB15(10, 10, 10), [C_CYAN] = RGB15(17, 31, 29), [C_LBLUE] = RGB15(17, 26, 31), [C_DIMWHITE] = RGB15(23, 23, 23),
     };
     for (int i = 0; i < 64; i++) bgPal[i] = i < (int)(sizeof P / sizeof P[0]) ? P[i] : 0;
@@ -49,7 +49,7 @@ void scenePalette(int which) {
     static int cur = -1;
     if (cur == which) return;
     cur = which;
-    memcpy(&bgPal[64], which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : logo_pal, 192 * 2);
+    memcpy(&bgPal[64], which >= PAL_BALL ? bb_pal[which - PAL_BALL] : which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : logo_pal, 192 * 2);
 }
 
 // ── pixels ────────────────────────────────────────────────────────────────
@@ -229,21 +229,28 @@ static void blitRot8(const u8 *spr, int w, int h, int cx, int cy, float ang) {
         }
     }
 }
+// The website's power marker: a black marker with a thick white outline and a narrower cap
+// block on the front end, pointing where the throw goes. It grows with power, and the body
+// fills from the back with the power's colour (white through gold to red).
+static int inRR(int i, int j, int x, int y, int w, int h, int r) {   // inside a rounded rectangle?
+    if (i < x || i >= x + w || j < y || j >= y + h) return 0;
+    int dx = i < x + r ? x + r - i : i >= x + w - r ? i - (x + w - r - 1) : 0;
+    int dy = j < y + r ? y + r - j : j >= y + h - r ? j - (y + h - r - 1) : 0;
+    return dx * dx + dy * dy <= r * r;
+}
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power) {
-    static u8 spr[180 * 12];
-    int L = (int)len; if (L < 20) L = 20; if (L > 180) L = 180;
-    int H = 12, cap = 8, nib = 8;
+    static u8 spr[180 * 14];
+    int L = (int)len; if (L < 22) L = 22; if (L > 180) L = 180;
+    const int H = 14, ol = 2, capL = 10, capW = 11, r = 3;
+    int bodyL = L - capL + ol, fillL = power > 0 ? (int)((bodyL - 2 * ol) * power + 1) : 0;
     int pr = (int)(power * 31);
     bgPal[C_POWER] = RGB15(31, 31 - pr * 2 / 3, pr < 16 ? 31 - pr * 2 : 0);
     for (int j = 0; j < H; j++) for (int i = 0; i < L; i++) {
-        int c = 0, dy = j - H / 2; if (dy < 0) dy = -dy - 1;
-        if (i >= L - nib) {                                  // the nib: a point
-            int half = (L - 1 - i) * (H / 2) / nib;
-            if (dy <= half) c = dy >= half - 1 ? C_WHITE : (power > 0 ? C_POWER : C_PWOFF);
-            if (i >= L - 3 && dy <= 1) c = C_NIB;
-        } else if (i < cap) {                                // the cap, rounded at the back
-            int in = inset(j, H, 5); if (i >= in) c = (i == in || j < 2 || j >= H - 2 || i == cap - 1) ? C_WHITE : C_GRAD0 + j * 32 / H;
-        } else c = (j < 2 || j >= H - 2) ? C_WHITE : (power > 0 && (i - cap) < (L - nib - cap) * power + 1 ? C_POWER : C_GRAD0 + j * 32 / H);
+        int c = 0;
+        if (inRR(i, j, L - capL, (H - capW) / 2, capL, capW, 1))                       // the cap, over the body's end
+            c = inRR(i, j, L - capL + ol, (H - capW) / 2 + ol, capL - 2 * ol, capW - 2 * ol, 0) ? C_PWDARK : C_WHITE;
+        else if (inRR(i, j, 0, 0, bodyL, H, r))                                          // the body
+            c = inRR(i, j, ol, ol, bodyL - 2 * ol, H - 2 * ol, r - 1) ? (i - ol < fillL ? C_POWER : C_PWDARK) : C_WHITE;
         spr[j * L + i] = (u8)c;
     }
     float cx = x0 + ux * L / 2, cy = y0 + uy * L / 2;

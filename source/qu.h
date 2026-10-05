@@ -69,7 +69,7 @@ IWRAM_FN void sramWrite(int off, const void *src, int n);
 
 // ── screens ───────────────────────────────────────────────────────────────
 enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME, S_SLOT, S_PLINKO,
-       S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER };
+       S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER, S_BALL_MENU, S_BALL, S_BALL_PAUSE, S_BALL_OVER };
 extern int screen;
 enum { M_SINGLE = 1, M_TWO = 2, M_OLYMPICS = 3 };
 extern int mode;
@@ -84,7 +84,8 @@ typedef struct {
     int musicOn, sfxOn, twoRounds, timer1p, timer2p, orient;
     char name[9];
     int coins, coinsEarned, coinsSpent, slotSpins, slotWins, slotLost;   // (took 6 of the spare slots: older saves read 0)
-    u32 spare[10];                 // room to grow
+    int ballBest[3];               // Qu33ph-Ball's best on each machine (took 3 spare slots)
+    u32 spare[7];                  // room to grow
     // ── added in save version 2 (the arcade). Version 1 saves load untouched; these start at 0.
     int arcadeBest[9], arcadePlays[9];   // one slot per arcade game (ARC_*)
 } SaveData;
@@ -122,7 +123,7 @@ void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
-enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI };
+enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_BALL /* +machine */ };
 void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
 void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
 void coinCount(int x, int y, int slotPal);              // the coin and your balance
@@ -136,9 +137,9 @@ int  btnInput(Btn *b, int n, int *sel, int cols);   // returns pressed index or 
 // ── sound (sound in game.c) ───────────────────────────────────────────────
 void sfxThrow(int orient); void sfxPeef(int orient); void sfxPlop(void);
 void musicStart(void); void musicStop(void); void musicToggle(void);
-enum { MUS_MAIN, MUS_MINI };
+enum { MUS_MAIN, MUS_MINI, MUS_BALL };
 void musicSet(int track);          // switch tracks (restarts only if it changes)
-enum { OBJ_MAIN, OBJ_MINI };
+enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL };
 void objSet(int set);              // the sprite pictures this screen needs (loaded when it changes)
 
 // ── the match (game.c) ────────────────────────────────────────────────────
@@ -174,6 +175,10 @@ void drawMiniMenu(void); void inputMiniMenu(void);
 void drawMini(void); void inputMini(void); void updateMini(void);
 void drawMiniOver(void); void inputMiniOver(void);
 void miniObjLoad(void);
+void drawBallMenu(void); void inputBallMenu(void);
+void drawBall(void); void inputBall(void); void updateBall(void);
+void drawBallOver(void); void inputBallOver(void);
+void ballObjLoad(void); int ballMachine(void);
 
 // ── toast: short message (new high score) ─────────────────────────────────
 void toast(const char *a, const char *b);

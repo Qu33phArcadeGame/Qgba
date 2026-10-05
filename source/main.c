@@ -307,12 +307,16 @@ int main(void) {
             case S_MINI_MENU: inputMiniMenu(); break;
             case S_MINI: case S_MINI_PAUSE: inputMini(); for (int s = 0; s < steps && screen == S_MINI; s++) updateMini(); break;
             case S_MINI_OVER: inputMiniOver(); break;
+            case S_BALL_MENU: inputBallMenu(); break;
+            case S_BALL: case S_BALL_PAUSE: inputBall(); for (int s = 0; s < steps && screen == S_BALL; s++) updateBall(); break;
+            case S_BALL_OVER: inputBallOver(); break;
         }
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
         int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
-        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : PAL_MENU);
-        objSet(onTable ? OBJ_MINI : OBJ_MAIN);
-        musicSet(inMini ? MUS_MINI : MUS_MAIN);              // the arcade game has its own music, menu to results
+        int inBall = screen >= S_BALL_MENU && screen <= S_BALL_OVER, onMachine = screen >= S_BALL && screen <= S_BALL_OVER;
+        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : PAL_MENU);
+        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : OBJ_MAIN);
+        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : MUS_MAIN);   // each arcade game has its own music, menu to results
         platGameView(inMatch);
         if (!inMatch) hideSprites();
         clipAll();
@@ -338,6 +342,9 @@ int main(void) {
             case S_MINI_MENU: drawMiniMenu(); break;
             case S_MINI: case S_MINI_PAUSE: drawMini(); break;
             case S_MINI_OVER: drawMiniOver(); break;
+            case S_BALL_MENU: drawBallMenu(); break;
+            case S_BALL: case S_BALL_PAUSE: drawBall(); break;
+            case S_BALL_OVER: drawBallOver(); break;
         }
         drawToast();
         platFlip();

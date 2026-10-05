@@ -60,3 +60,7 @@ extern const int8_t ms_peef3[];
 #define MS_PEEF3_LEN 22192
 extern const int8_t ms_music[];
 #define MS_MUSIC_LEN 448536
+extern const int8_t bs_roll[];
+#define BS_ROLL_LEN 22528
+extern const int8_t bs_music[];
+#define BS_MUSIC_LEN 450000

@@ -59,7 +59,7 @@ void sfxPlop(void) { play(snd_plop, SND_PLOP_LEN); }
 static int musicOnNow, musicTrack = MUS_MAIN;
 void musicStart(void) {
     if (musicOnNow || !sv.musicOn) return;
-    if (musicTrack == MUS_MINI) sndMusic(ms_music, MS_MUSIC_LEN); else sndMusic(snd_music, SND_MUSIC_LEN);
+    if (musicTrack == MUS_MINI) sndMusic(ms_music, MS_MUSIC_LEN); else if (musicTrack == MUS_BALL) sndMusic(bs_music, BS_MUSIC_LEN); else sndMusic(snd_music, SND_MUSIC_LEN);
     musicOnNow = 1;
 }
 void musicSet(int t) { if (t != musicTrack) { musicStop(); musicTrack = t; } musicStart(); }
@@ -226,7 +226,7 @@ void matchInput(int down, int held, int up) {
     if (aimAng > -0.55f) aimAng = -0.55f;
     if (down & KEY_A) { charging = 1; power = 0; ph = 0; }
     if (charging) {
-        ph++; float p = (ph % 64) / 32.0f; power = p < 1 ? p : 2 - p;    // full in about half a second
+        ph++; float p = (ph % 44) / 22.0f; power = p < 1 ? p : 2 - p;    // full in about a third of a second
         chargeT = 90;
         if (down & KEY_B) charging = 0;
         else if (up & KEY_A) { charging = 0; float pw = 70 + power * 180; throwMarker(fcos(aimAng) * pw, fsin(aimAng) * pw); }
@@ -250,6 +250,7 @@ void objSet(int set) {
     if (set == cur) return;
     cur = set;
     if (set == OBJ_MINI) { miniObjLoad(); return; }
+    if (set == OBJ_BALL) { ballObjLoad(); return; }
     platObjTiles(T_GREEN, obj_mk_green, 2048); platObjTiles(T_RED, obj_mk_red, 2048);
     platObjTiles(T_BLUE, obj_mk_blue, 2048); platObjTiles(T_CHAIR, obj_chair, 2048);
     platObjTiles(T_GLOW, glow_mk_green, 2048); platObjTiles(T_GLOW + 64, glow_mk_red, 2048); platObjTiles(T_GLOW + 128, glow_mk_blue, 2048);
