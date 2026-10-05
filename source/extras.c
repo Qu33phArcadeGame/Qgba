@@ -8,8 +8,11 @@ const char *NATION_CODE[NATION_COUNT] = { "IRL", "ISR", "USA", "RSA", "ENG", "SC
 int olyNation, olyFinished;
 static int olyN[8];                                  // the 8 nations; the player is olyN[7]
 static int qf1[2], qf2[2], qf3[2], qf4[2], sf1[2], sf2[2], fin[2];   // scores (doubled), -1 = not played
-static int olyRound, olyOut, olyMedal, olyTotal, olySel;
 int olySpecial;                                       // playing the Special Olympics (a second chance after losing)
+static int olyRound, olyOut, olyMedal, olyTotal, olySel, olyCoins;
+static const int REWARD[4] = { 0, 5, 10, 15 };      // win QF = 5, SF = 10, FINAL = 15 coins
+static const int SPECIAL_REWARD[4] = { 0, 1, 2, 3 };  // the Special Olympics pays less (as the website)
+static void olyReward(int round) { int r = (olySpecial ? SPECIAL_REWARD : REWARD)[round]; addCoins(r); olyCoins += r; }
 
 // Rival scores: the website's formula (85-130), scaled to what's reachable here (as on the DS) —
 // a flawless game (a QU33PH every set) scores about 40-45. Raise OLY_SCALE for a harder Olympics.
@@ -20,7 +23,7 @@ static void freshBracket(void) {
     int *qs[3] = { qf1, qf2, qf3 };
     for (int k = 0; k < 3; k++) { qs[k][0] = simScore(); do qs[k][1] = simScore(); while (qs[k][1] == qs[k][0]); }
     qf4[0] = qf4[1] = sf1[0] = sf1[1] = sf2[0] = sf2[1] = fin[0] = fin[1] = -1;
-    olyRound = 1; olyOut = 0; olyMedal = 0; olyTotal = 0; olyFinished = 0;
+    olyRound = 1; olyOut = 0; olyMedal = 0; olyTotal = 0; olyFinished = 0; olyCoins = 0;
 }
 void olyNew(void) {
     olySpecial = 0;
@@ -38,14 +41,15 @@ void olyAfterMatch(int p) {
         qf4[0] = opp; qf4[1] = p;                    // olyN[6] vs player
         sf1[0] = simScore(); do sf1[1] = simScore(); while (sf1[1] == sf1[0]);
         if (p <= opp) { olyOut = 1; olyFinished = 1; }
-        else olyRound = 2;
+        else { olyReward(1); olyRound = 2; }
     } else if (olyRound == 2) {
         sf2[0] = opp; sf2[1] = p;                    // QF3 winner vs player
         if (p <= opp) { olyOut = 1; olyMedal = 1; olyFinished = 1; }
-        else olyRound = 3;
+        else { olyReward(2); olyRound = 3; }
     } else {
         fin[0] = opp; fin[1] = p;                    // SF1 winner vs player
         olyMedal = p > opp ? 3 : 2;
+        if (olyMedal == 3) olyReward(3);
         olyFinished = 1;
     }
     if (olyFinished && !olySpecial) {                // (Special Olympics medals don't count toward the real ones)
@@ -105,10 +109,10 @@ static void matchRow(int y, int a, int b, int *m, const char *lbl) {
     char s[12];
     textS(6, y + 2, lbl, GREY);
     drawFlag(34, y + 1, 18, 12, a); text(56, y, CODE[a], a == olyNation ? YELLOW : WHITE, 1);
-    if (m[0] >= 0) { scoreStr(s, m[0]); text(92, y, s, m[0] > m[1] ? LIME : GREY, 1); }
-    textS(118, y + 2, "v", GREY);
-    drawFlag(132, y + 1, 18, 12, b); text(154, y, CODE[b], b == olyNation ? YELLOW : WHITE, 1);
-    if (m[1] >= 0) { scoreStr(s, m[1]); text(190, y, s, m[1] > m[0] ? LIME : GREY, 1); }
+    if (m[0] >= 0) { scoreStr(s, m[0]); text(89, y, s, m[0] > m[1] ? LIME : GREY, 1); }
+    textS(126, y + 2, "v", GREY);
+    drawFlag(135, y + 1, 18, 12, b); text(157, y, CODE[b], b == olyNation ? YELLOW : WHITE, 1);
+    if (m[1] >= 0) { scoreStr(s, m[1]); text(193, y, s, m[1] > m[0] ? LIME : GREY, 1); }
 }
 static Btn olyBtn[2]; static int olyBtnSel, olyNB;
 static void olyButtons(void) {
@@ -133,10 +137,11 @@ void drawOlyBracket(void) {
     if (olyRound >= 2 || sf2[0] >= 0) matchRow(85, w3, olyNation, sf2, "SF2");
     if (fin[0] >= 0 || olyRound == 3) matchRow(101, s1w >= 0 ? s1w : w1, olyNation, fin, "FIN");
     olyButtons();
+    { char s[32]; sprintf(s, "coins won: %d", olyCoins); textS(SW - 4 - textSW(s), 118, s, GOLD); }
     if (olyFinished) {
         const char *m = olyMedal == 3 ? "GOLD MEDAL!" : olyMedal == 2 ? "SILVER MEDAL" : olyMedal == 1 ? "BRONZE MEDAL" : "KNOCKED OUT";
         int c = olyMedal == 3 ? GOLD : olyMedal == 2 ? C_SILVER : olyMedal == 1 ? C_BRONZE : RED;
-        textC(117, m, c, 1);
+        textCW(0, 170, 117, m, c, 1);
     }
     drawBtns(olyBtn, olyNB, olyBtnSel);
 }

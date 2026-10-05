@@ -8,6 +8,49 @@
 #define MM_H 160
 #define LOGO_W 111
 #define LOGO_H 40
+#define COIN_W 18
+#define COIN_H 18
+#define MACH_W 171
+#define MACH_H 160
+#define SYM_W 22
+#define REEL_X0 51
+#define REEL_X1 84
+#define REEL_X2 116
+#define REEL_Y 67
+extern const uint8_t coin8[COIN_W * COIN_H];      // the coin in the menus' palette
+extern const uint8_t mach8[MACH_W * MACH_H];      // the slot screen: 0 = see-through, else palette 64-255
+extern const uint8_t sym8[7][SYM_W * SYM_W];
+extern const uint8_t scoin8[COIN_W * COIN_H];
+extern const uint16_t slot_pal[192];
+#define ARC_W 44
+#define ARC_H 56
+extern const uint8_t arc8[9][ARC_W * ARC_H];   // the arcade cabinets (menus' palette), in the DS's game order
+#define MINIT_W 119
+#define MINIT_H 160
+#define MINIT_Y0 40
+#define MINIT_S 0.465f
+extern const uint8_t minit8[MINIT_W * MINIT_H];   // Mini Qu33ph's table, palette 64-255
+extern const uint16_t minit_pal[192];
+extern const uint8_t mm_green[1024];
+extern const uint16_t mm_green_pal[16];
+extern const uint8_t mm_pink[1024];
+extern const uint16_t mm_pink_pal[16];
+extern const uint8_t mm_yellow[1024];
+extern const uint16_t mm_yellow_pal[16];
+extern const uint8_t mm_blue[1024];
+extern const uint16_t mm_blue_pal[16];
+extern const uint8_t mm_case[1024];
+extern const uint16_t mm_case_pal[16];
+extern const uint8_t mm_chair[512];
+extern const uint16_t mm_chair_pal[16];
+extern const uint8_t mm_shadow[256];          // 32x16, colour 1
+// PlinQu33ph markers: red, green 32x32; blue 64x32 (4bpp tiles)
+extern const uint8_t pm_red[512];
+extern const uint16_t pm_red_pal[16];
+extern const uint8_t pm_green[512];
+extern const uint16_t pm_green_pal[16];
+extern const uint8_t pm_blue[1024];
+extern const uint16_t pm_blue_pal[16];
 extern const uint8_t field8[FIELD_W * FIELD_H];   // palette 64-255
 extern const uint16_t field_pal[192];
 extern const uint8_t mini8[MM_W * MM_H];

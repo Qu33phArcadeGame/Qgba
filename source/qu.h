@@ -34,7 +34,7 @@ enum { KEY_A = 1, KEY_B = 2, KEY_SELECT = 4, KEY_START = 8, KEY_RIGHT = 16, KEY_
 enum { C_BLACK, C_WHITE, C_DARK, C_YELLOW, C_GOLD, C_GREY, C_RED, C_LIME, C_SEL, C_DIMEDGE, C_SILVER,
        C_BRONZE, C_PANEL, C_PANELLINE, C_TOAST, C_SHINE, C_GRAD0 /* 16-47: the buttons' gradient */,
        C_FR = 48, C_FB, C_FG, C_FY, C_FO, C_FL, C_MGREEN, C_MRED, C_MBLUE, C_POWER, C_NIB, C_PWDARK,
-       C_PWOFF, C_ROW, C_ROWLINE, C_DIMWHITE };
+       C_PWOFF, C_CYAN, C_LBLUE, C_DIMWHITE };
 #define WHITE  C_WHITE
 #define BLACK  C_BLACK
 #define YELLOW C_YELLOW
@@ -68,7 +68,8 @@ IWRAM_FN void sramRead(void *dst, int off, int n);
 IWRAM_FN void sramWrite(int off, const void *src, int n);
 
 // ── screens ───────────────────────────────────────────────────────────────
-enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME };
+enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME, S_SLOT, S_PLINKO,
+       S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER };
 extern int screen;
 enum { M_SINGLE = 1, M_TWO = 2, M_OLYMPICS = 3 };
 extern int mode;
@@ -82,8 +83,12 @@ typedef struct {
     int gold, silver, bronze;
     int musicOn, sfxOn, twoRounds, timer1p, timer2p, orient;
     char name[9];
-    u32 spare[16];                 // room to grow
+    int coins, coinsEarned, coinsSpent, slotSpins, slotWins, slotLost;   // (took 6 of the spare slots: older saves read 0)
+    u32 spare[10];                 // room to grow
+    // ── added in save version 2 (the arcade). Version 1 saves load untouched; these start at 0.
+    int arcadeBest[9], arcadePlays[9];   // one slot per arcade game (ARC_*)
 } SaveData;
+enum { ARC_MINI, ARC_BALL, ARC_FIDGET, ARC_BOWLING, ARC_STACK, ARC_FLIP, ARC_DOZER, ARC_JUMP, ARC_PINBALL, ARC_COUNT };
 extern SaveData sv;
 extern int saveOK;
 void saveInit(void);
@@ -91,6 +96,8 @@ void saveWrite(void);
 void resetHighScores(void);
 void resetEverything(void);
 void trackGameEnd(int score2);
+void addCoins(int n);
+void spendCoins(int n);
 void trackQu33ph(int suddenDeath);
 void trackMega(void);
 void trackPeef(void);
@@ -115,7 +122,10 @@ void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
-void scenePalette(int game);       // 64-255: the field (1) or the logo (0)
+enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI };
+void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
+void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
+void coinCount(int x, int y, int slotPal);              // the coin and your balance
 float fsqrt(float v); float fatan2r(float y, float x); float fabsf_(float v); float fsin(float a); float fcos(float a); float frand(void);
 
 // ── buttons: drawn + navigated the same way on every screen ───────────────
@@ -126,6 +136,10 @@ int  btnInput(Btn *b, int n, int *sel, int cols);   // returns pressed index or 
 // ── sound (sound in game.c) ───────────────────────────────────────────────
 void sfxThrow(int orient); void sfxPeef(int orient); void sfxPlop(void);
 void musicStart(void); void musicStop(void); void musicToggle(void);
+enum { MUS_MAIN, MUS_MINI };
+void musicSet(int track);          // switch tracks (restarts only if it changes)
+enum { OBJ_MAIN, OBJ_MINI };
+void objSet(int set);              // the sprite pictures this screen needs (loaded when it changes)
 
 // ── the match (game.c) ────────────────────────────────────────────────────
 extern int score2[2], player, p2Round, frameCount, roundFrames, totalFrames, suddenDeath;
@@ -148,6 +162,18 @@ void olyAfterMatch(int playerScore2);
 void drawOlySelect(void); void inputOlySelect(void);
 void drawOlyBracket(void); void inputOlyBracket(void);
 extern int olyFinished;
+
+// ── the slot machine and PlinQu33ph (casino.c) ─────────────────────────────
+void drawSlot(void); void inputSlot(void); void updateSlot(void);
+void drawPlinko(void); void inputPlinko(void); void updatePlinko(void); void plinkoEnter(void);
+void casinoInit(void);
+
+// ── the arcade and Mini Qu33ph (mini.c) ─────────────────────────────────────
+void drawArcade(void); void inputArcade(void);
+void drawMiniMenu(void); void inputMiniMenu(void);
+void drawMini(void); void inputMini(void); void updateMini(void);
+void drawMiniOver(void); void inputMiniOver(void);
+void miniObjLoad(void);
 
 // ── toast: short message (new high score) ─────────────────────────────────
 void toast(const char *a, const char *b);

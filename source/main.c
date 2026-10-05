@@ -10,10 +10,10 @@
 
 int screen = S_TITLE, mode = M_SINGLE;
 int kDown, kHeld, kUp;
-static int sel, confirmT, confirmWhich = -1, highTab, resultsNewBest;
+static int sel, confirmT, confirmWhich = -1, highTab, resultsNewBest, lastCoinsGain;
 static Btn B[40];
 
-void goScreen(int s) { screen = s; sel = 0; confirmWhich = -1; saveWrite(); }
+void goScreen(int s) { screen = s; sel = 0; confirmWhich = -1; if (s == S_PLINKO) plinkoEnter(); saveWrite(); }
 
 // ── starting and ending matches ───────────────────────────────────────────
 static void beginTurn(void) { orient = sv.orient; startMatch(); screen = S_PLAY; }
@@ -36,9 +36,11 @@ void olympicsDone(void) { trackGameEnd(0); saveWrite(); goScreen(S_TITLE); submi
 
 static void matchFinished(void) {
     if (mode == M_SINGLE) {
-        int best = sv.high1p[0].name[0] ? sv.high1p[0].score2 : 0;
+        int best = sv.high1p[0].name[0] ? sv.high1p[0].score2 : 0, before = sv.coins;
         trackGameEnd(score2[0]);
         resultsNewBest = score2[0] > best && score2[0] > 0;
+        if (resultsNewBest) addCoins(25);                       // new personal best: +25 coins (as on the website)
+        lastCoinsGain = sv.coins - before;
         saveWrite();
         goScreen(S_RESULTS);
         submitHigh(sv.high1p, score2[0], S_RESULTS);
@@ -53,35 +55,52 @@ static void matchFinished(void) {
     }
 }
 
-// ── title: the logo on the left, the menu down the right ──────────────────
-#define TITLE_N 5
-static const char *TITLE_ITEMS[TITLE_N] = { "1 PLAYER", "2 PLAYER", "OLYMPICS", "HIGH SCORES", "SETTINGS" };
+// ── title: the logo, coins and the slot + PlinQu33ph on the left, the main menu down the right ──
+#define TITLE_N 8
+static const char *TITLE_ITEMS[TITLE_N] = { "1 PLAYER", "2 PLAYER", "OLYMPICS", "HIGH SCORES", "SETTINGS", "SLOT", "PLINQU33PH", "ARCADE" };
 static void titleLayout(void) {
-    for (int i = 0; i < TITLE_N; i++) { B[i] = (Btn){ 124, 8 + i * 30, 112, 25, "", 0, 0 }; strcpy(B[i].label, TITLE_ITEMS[i]); }
+    for (int i = 0; i < 5; i++) { B[i] = (Btn){ 124, 8 + i * 30, 112, 25, "", 0, 0 }; strcpy(B[i].label, TITLE_ITEMS[i]); }
+    for (int i = 5; i < 8; i++) { B[i] = (Btn){ 6, 88 + (i - 5) * 24, 112, 22, "", 0, 0 }; strcpy(B[i].label, TITLE_ITEMS[i]); }
+    B[7].col = GOLD;
 }
 static void drawTitle(void) {
     fillScreen(DARK);
-    drawLogo((124 - LOGO_W) / 2, 30);
+    drawLogo((124 - LOGO_W) / 2, 6);
     char s[32], a[10];
     if (sv.high1p[0].name[0]) {
         scoreStr(a, sv.high1p[0].score2);
-        textCW(0, 124, 82, "HIGH SCORE", GREY, 1);
-        sprintf(s, "%s  %s", a, sv.high1p[0].name); textCW(0, 124, 98, s, YELLOW, 1);
+        sprintf(s, "HIGH SCORE  %s  %s", a, sv.high1p[0].name); textS((124 - textSW(s)) / 2, 52, s, GREY);
     }
-    static const char *HINT[3] = { "D-pad: aim", "hold A, let go: throw", "L / R: how it lands" };
-    for (int i = 0; i < 3; i++) textS((124 - textSW(HINT[i])) / 2, 120 + i * 11, HINT[i], GREY);
+    sprintf(s, "%d", sv.coins);
+    int w = COIN_W + 3 + textW(s, 1), x = (124 - w) / 2;
+    coinCount(x, 68, 0);
     titleLayout();
     drawBtns(B, TITLE_N, sel);
 }
+// up/down within a column (wrapping), left/right hop between the columns
+static void titleNav(void) {
+    int right = sel < 5;
+    if (kDown & KEY_DOWN) sel = right ? (sel + 1) % 5 : 5 + (sel - 4) % 3;
+    if (kDown & KEY_UP) sel = right ? (sel + 4) % 5 : 5 + (sel - 3) % 3;
+    if (kDown & (KEY_LEFT | KEY_RIGHT)) {
+        int cy = B[sel].y + B[sel].h / 2, best = sel, bd = 1 << 30;
+        for (int i = right ? 5 : 0; i < (right ? 8 : 5); i++) { int d = B[i].y + B[i].h / 2 - cy; if (d < 0) d = -d; if (d < bd) { bd = d; best = i; } }
+        sel = best;
+    }
+}
 static void inputTitle(void) {
     titleLayout();
-    int h = btnInput(B, TITLE_N, &sel, 1);
-    switch (h) {
+    if (sel < 0 || sel >= TITLE_N) sel = 0;
+    titleNav();
+    switch ((kDown & KEY_A) ? sel : -1) {
         case 0: startSingle(); break;
         case 1: startTwo(); break;
         case 2: goScreen(S_OLY_SELECT); break;
         case 3: highTab = 0; goScreen(S_HIGHS); break;
         case 4: goScreen(S_SETTINGS); break;
+        case 5: goScreen(S_SLOT); break;
+        case 6: goScreen(S_PLINKO); break;
+        case 7: goScreen(S_ARCADE); break;
     }
 }
 
@@ -103,17 +122,20 @@ static void drawHighs(void) {
             if (l[i].name[0]) { scoreStr(a, l[i].score2); text(SW - 24 - textW(a, 1), y, a, YELLOW, 1); }
         }
         if (highTab == 1) textS(SW - 4 - textSW("tournament total"), 150, "tournament total", GREY);
-    } else {
+    } else {                                          // the career record and the coin record, side by side
         char s[24], a[10];
         scoreStr(a, sv.high1p[0].name[0] ? sv.high1p[0].score2 : 0);
-        const char *L[6] = { "Games played", "High score", "QU33PHs landed", "MEGA QU33PHs", "PEEFs", "Games forfeited" };
-        int V[6] = { sv.games, 0, sv.qu33phs, sv.megas, sv.peefs, sv.forfeits };
-        for (int i = 0; i < 6; i++) {
-            text(10, 22 + i * 16, L[i], WHITE, 1);
+        const char *L[12] = { "Games played", "High score", "QU33PHs landed", "MEGA QU33PHs", "PEEFs", "Games forfeited",
+                              "Coins now", "Coins earned", "Coins spent", "Slot spins", "Slot wins", "Lost in slots" };
+        int V[12] = { sv.games, 0, sv.qu33phs, sv.megas, sv.peefs, sv.forfeits, sv.coins, sv.coinsEarned, sv.coinsSpent, sv.slotSpins, sv.slotWins, sv.slotLost };
+        for (int i = 0; i < 12; i++) {
+            int x = i < 6 ? 6 : 124, y = 24 + (i % 6) * 15;
+            textS(x, y, L[i], i < 6 ? WHITE : C_DIMWHITE);
             if (i == 1) strcpy(s, a); else sprintf(s, "%d", V[i]);
-            text(SW - 10 - textW(s, 1), 22 + i * 16, s, GOLD, 1);
+            textS(x + 110 - textSW(s), y, s, GOLD);
         }
-        textC(122, "OLYMPIC MEDALS", GOLD, 1);
+        rect(120, 22, 1, 88, C_DIMEDGE);
+        textC(118, "OLYMPIC MEDALS", GOLD, 1);
         const char *M[3] = { "Gold", "Silver", "Bronze" }; int MV[3] = { sv.gold, sv.silver, sv.bronze };
         const int MC[3] = { C_GOLD, C_SILVER, C_BRONZE };
         for (int i = 0; i < 3; i++) {
@@ -215,6 +237,7 @@ static void drawResults(void) {
     if (mode == M_SINGLE) {
         scoreStr(a, score2[0]); sprintf(s, "FINAL SCORE  %s", a); textC(54, s, YELLOW, 2);
         if (resultsNewBest) textC(88, "NEW PERSONAL BEST!", LIME, 1);
+        if (lastCoinsGain > 0) { sprintf(s, "+%d coins", lastCoinsGain); textC(104, s, GOLD, 1); }
     } else {
         scoreStr(a, score2[0]); scoreStr(b, score2[1]);
         sprintf(s, "P1  %s     P2  %s", a, b); textC(52, s, WHITE, 1);
@@ -246,9 +269,11 @@ int main(void) {
     platInit();
     uiPalette();
     saveInit();
+#ifdef GBA_SIM
+    if (getenv("SIM_COINS")) sv.coins = atoi(getenv("SIM_COINS"));     // (test harness only)
+#endif
     gameInit();
     srand(0x51A);
-    musicStart();
     u32 vbLast = vbCount; u16 prev = 0;
     while (1) {
         frameCount++;
@@ -276,9 +301,18 @@ int main(void) {
             case S_OLY_SELECT: inputOlySelect(); break;
             case S_OLY_BRACKET: inputOlyBracket(); break;
             case S_NAME: inputName(); break;
+            case S_SLOT: inputSlot(); updateSlot(); break;
+            case S_PLINKO: inputPlinko(); for (int s = 0; s < steps && screen == S_PLINKO; s++) updatePlinko(); break;
+            case S_ARCADE: inputArcade(); break;
+            case S_MINI_MENU: inputMiniMenu(); break;
+            case S_MINI: case S_MINI_PAUSE: inputMini(); for (int s = 0; s < steps && screen == S_MINI; s++) updateMini(); break;
+            case S_MINI_OVER: inputMiniOver(); break;
         }
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
-        scenePalette(inMatch);
+        int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
+        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : PAL_MENU);
+        objSet(onTable ? OBJ_MINI : OBJ_MAIN);
+        musicSet(inMini ? MUS_MINI : MUS_MAIN);              // the arcade game has its own music, menu to results
         platGameView(inMatch);
         if (!inMatch) hideSprites();
         clipAll();
@@ -298,6 +332,12 @@ int main(void) {
             case S_OLY_SELECT: drawOlySelect(); break;
             case S_OLY_BRACKET: drawOlyBracket(); break;
             case S_NAME: drawName(); break;
+            case S_SLOT: drawSlot(); break;
+            case S_PLINKO: drawPlinko(); break;
+            case S_ARCADE: drawArcade(); break;
+            case S_MINI_MENU: drawMiniMenu(); break;
+            case S_MINI: case S_MINI_PAUSE: drawMini(); break;
+            case S_MINI_OVER: drawMiniOver(); break;
         }
         drawToast();
         platFlip();

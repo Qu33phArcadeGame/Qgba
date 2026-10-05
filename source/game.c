@@ -56,10 +56,15 @@ void sfxPeef(int o) {
     else play(snd_horizontalpeef1, SND_HORIZONTALPEEF1_LEN);
 }
 void sfxPlop(void) { play(snd_plop, SND_PLOP_LEN); }
-static int musicOnNow;
-void musicStart(void) { if (musicOnNow || !sv.musicOn) return; sndMusic(snd_music, SND_MUSIC_LEN); musicOnNow = 1; }
+static int musicOnNow, musicTrack = MUS_MAIN;
+void musicStart(void) {
+    if (musicOnNow || !sv.musicOn) return;
+    if (musicTrack == MUS_MINI) sndMusic(ms_music, MS_MUSIC_LEN); else sndMusic(snd_music, SND_MUSIC_LEN);
+    musicOnNow = 1;
+}
+void musicSet(int t) { if (t != musicTrack) { musicStop(); musicTrack = t; } musicStart(); }
 void musicStop(void) { sndMusicStop(); musicOnNow = 0; }
-void musicToggle(void) { sv.musicOn = !sv.musicOn; if (sv.musicOn) { if (musicOnNow) sndMusicMute(0); else musicStart(); } else sndMusicMute(1); }
+void musicToggle(void) { sv.musicOn = !sv.musicOn; if (sv.musicOn) { sndMusicMute(0); musicStart(); } else sndMusicMute(1); }
 
 // ── maths ─────────────────────────────────────────────────────────────────
 static float dist(float ax, float ay, float bx, float by) { return fsqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)); }
@@ -238,12 +243,21 @@ static const int MK_TILE[3] = { T_GREEN, T_RED, T_BLUE };
 static u8 panelBg[64 * SH] EWRAM_BSS __attribute__((aligned(4)));   // the panel's fixed picture (the table map)
 #define PANEL_X VIEW_W
 #define MAP_X (PANEL_X + 38)             // the table map's left edge on screen
-void gameInit(void) {
+// The match (and PlinQu33ph) and each arcade game share the sprite memory: whichever screen is
+// up has its pictures loaded.
+void objSet(int set) {
+    static int cur = -1;
+    if (set == cur) return;
+    cur = set;
+    if (set == OBJ_MINI) { miniObjLoad(); return; }
     platObjTiles(T_GREEN, obj_mk_green, 2048); platObjTiles(T_RED, obj_mk_red, 2048);
     platObjTiles(T_BLUE, obj_mk_blue, 2048); platObjTiles(T_CHAIR, obj_chair, 2048);
     platObjTiles(T_GLOW, glow_mk_green, 2048); platObjTiles(T_GLOW + 64, glow_mk_red, 2048); platObjTiles(T_GLOW + 128, glow_mk_blue, 2048);
     memcpy(&objPal[0], obj_mk_green_pal, 32); memcpy(&objPal[16], obj_mk_red_pal, 32);
     memcpy(&objPal[32], obj_mk_blue_pal, 32); memcpy(&objPal[48], obj_chair_pal, 32);
+    casinoInit();
+}
+void gameInit(void) {
     // the panel: dark, with the whole table drawn small down its right-hand side
     memset(panelBg, C_PANEL, sizeof panelBg);
     for (int y = 0; y < SH; y++) {

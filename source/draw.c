@@ -38,18 +38,18 @@ void uiPalette(void) {
         [C_FR] = RGB15(26, 3, 5), [C_FB] = RGB15(2, 6, 18), [C_FG] = RGB15(2, 16, 8), [C_FY] = RGB15(31, 26, 0),
         [C_FO] = RGB15(31, 16, 2), [C_FL] = RGB15(4, 12, 28), [C_MGREEN] = RGB15(6, 28, 8), [C_MRED] = RGB15(31, 6, 6),
         [C_MBLUE] = RGB15(8, 12, 31), [C_POWER] = RGB15(31, 31, 31), [C_NIB] = RGB15(31, 28, 6), [C_PWDARK] = RGB15(5, 5, 5),
-        [C_PWOFF] = RGB15(10, 10, 10), [C_ROW] = RGB15(2, 2, 2), [C_ROWLINE] = RGB15(5, 5, 5), [C_DIMWHITE] = RGB15(23, 23, 23),
+        [C_PWOFF] = RGB15(10, 10, 10), [C_CYAN] = RGB15(17, 31, 29), [C_LBLUE] = RGB15(17, 26, 31), [C_DIMWHITE] = RGB15(23, 23, 23),
     };
     for (int i = 0; i < 64; i++) bgPal[i] = i < (int)(sizeof P / sizeof P[0]) ? P[i] : 0;
     // the buttons' body: the website's dark gradient, top to bottom
     u16 top = RGB15(7, 7, 7), mid = RGB15(2, 2, 2), end = RGB15(0, 0, 0);
     for (int i = 0; i < 32; i++) bgPal[C_GRAD0 + i] = i < 15 ? mix15(top, mid, i, 15) : mix15(mid, end, i - 15, 17);
 }
-void scenePalette(int game) {
+void scenePalette(int which) {
     static int cur = -1;
-    if (cur == game) return;
-    cur = game;
-    memcpy(&bgPal[64], game ? field_pal : logo_pal, 192 * 2);
+    if (cur == which) return;
+    cur = which;
+    memcpy(&bgPal[64], which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : logo_pal, 192 * 2);
 }
 
 // ── pixels ────────────────────────────────────────────────────────────────
@@ -149,10 +149,15 @@ void scoreStr(char *o, int doubled) {
     else if (doubled & 1) sprintf(o, "%d.5", doubled / 2);
     else sprintf(o, "%d", doubled / 2);
 }
-void drawLogo(int x, int y) {                // the logo, colour 0 see-through
-    for (int j = 0; j < LOGO_H; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
-        const u8 *s = &logo8[j * LOGO_W];
-        for (int i = 0; i < LOGO_W; i++) { int xx = x + i; if (s[i] && xx >= clipX0 && xx < clipX1) put(xx, yy, s[i]); } }
+void drawImg(const u8 *img, int w, int h, int x, int y) {   // a picture, colour 0 see-through
+    for (int j = 0; j < h; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
+        const u8 *s = &img[j * w];
+        for (int i = 0; i < w; i++) { int xx = x + i; if (s[i] && xx >= clipX0 && xx < clipX1) put(xx, yy, s[i]); } }
+}
+void drawLogo(int x, int y) { drawImg(logo8, LOGO_W, LOGO_H, x, y); }
+void coinCount(int x, int y, int slotPal) {
+    char s[16]; drawImg(slotPal ? scoin8 : coin8, COIN_W, COIN_H, x, y); sprintf(s, "%d", sv.coins);
+    text(x + COIN_W + 3, y + 2, s, GOLD, 1);
 }
 
 // ── buttons ───────────────────────────────────────────────────────────────
