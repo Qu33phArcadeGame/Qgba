@@ -9,7 +9,7 @@ GBAFIX  := $(firstword $(wildcard $(DEVKITPRO)/tools/bin/gbafix) gbafix)
 ARCH    := -mthumb -mthumb-interwork -mcpu=arm7tdmi -mtune=arm7tdmi
 CFLAGS  := -O2 -Wall -Wno-unused-function -fno-strict-aliasing -ffunction-sections -fdata-sections $(ARCH)
 LDFLAGS := $(ARCH) -specs=gba.specs -Wl,--gc-sections -Wl,-Map,qu33ph.map
-SRC     := main game draw extras save gba gfx snd
+SRC     := main game draw extras save casino mini gba gfx snd
 OBJ     := $(addprefix build/,$(addsuffix .o,$(SRC)))
 
 qu33ph.gba: qu33ph.elf
