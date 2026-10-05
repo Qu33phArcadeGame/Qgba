@@ -1,0 +1,23 @@
+name: Build Qu33ph GBA
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build qu33ph.gba
+        run: |
+          echo "DEVKITARM=$DEVKITARM  DEVKITPRO=$DEVKITPRO"
+          make
+          # the save-type tag flash carts look for must be in the cartridge
+          if grep -q SRAM_V113 qu33ph.gba; then echo "OK: save tag present"; else echo "FAILED: save tag missing"; exit 1; fi
+          ls -la qu33ph.gba
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qu33ph-gba
+          path: qu33ph.gba
