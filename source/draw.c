@@ -264,7 +264,7 @@ static void rrSpan(int j, int x, int y, int w, int h, int r, int *a, int *b) {
     *a = x + in; *b = x + w - in;
 }
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power) {
-    static u8 spr[180 * 14];
+    static u8 spr[180 * 14] EWRAM_BSS;
     int L = (int)len; if (L < 22) L = 22; if (L > 180) L = 180;
     const int H = 14, ol = 2, capL = 10, capW = 11, r = 3, cy = (H - capW) / 2;
     int bodyL = L - capL + ol, fillL = power > 0 ? (int)((bodyL - 2 * ol) * power + 1) : 0;

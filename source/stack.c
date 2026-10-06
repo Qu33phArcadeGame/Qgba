@@ -45,8 +45,9 @@ typedef struct {
 typedef union { struct { u8 in1, out1, in2, out2; } e; u32 key; } Feat;
 typedef struct { V2 pos, n, r1, r2; float sep, Pn, Pt, mN, mT, bias; Feat f; } Contact;
 typedef struct { int a, b, n; Contact c[2]; float fric; } Arb;
-static Body B[MAXB]; static int nB;
-static Arb arbs[96], arbsOld[96]; static int nArb, nArbOld;
+// (these tables are big: they live in the GBA's 256 KB work RAM, not its 32 KB fast RAM)
+static Body B[MAXB] EWRAM_BSS; static int nB;
+static Arb arbs[96] EWRAM_BSS, arbsOld[96] EWRAM_BSS; static int nArb, nArbOld;
 enum { NOE, E1, E2, E3, E4 };
 typedef struct { V2 v; Feat f; } CV;
 
@@ -169,7 +170,8 @@ static void step(float dt) {
 
 // ── the game ──────────────────────────────────────────────────────────────
 enum { ST_PLAY, ST_OVER };
-static int state, score, overT, cur = -1, placed[MAXB], nPlaced, horizontal, coinsWon, newBest, overSel, menuSel;
+static int placed[MAXB] EWRAM_BSS;
+static int state, score, overT, cur = -1, nPlaced, horizontal, coinsWon, newBest, overSel, menuSel;
 static float camY, camScale = 1; static V2 target; static int haveTarget;
 static int newBody(float x, float y, float w, float h, int isStatic, int col) {
     int i = nB < MAXB ? nB++ : MAXB - 1;

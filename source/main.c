@@ -11,7 +11,7 @@
 int screen = S_TITLE, mode = M_SINGLE;
 int kDown, kHeld, kUp;
 static int sel, confirmT, confirmWhich = -1, highTab, resultsNewBest, lastCoinsGain;
-static Btn B[40];
+static Btn B[40] EWRAM_BSS;
 
 void goScreen(int s) { screen = s; sel = 0; confirmWhich = -1; if (s == S_PLINKO) plinkoEnter(); saveWrite(); }
 
