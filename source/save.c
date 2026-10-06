@@ -5,8 +5,9 @@ SaveData sv;
 int saveOK;
 #define SAVE_MAGIC 0x47335551   // "QU3G"
 #include <stddef.h>
-#define SAVE_VERSION 2
+#define SAVE_VERSION 3
 #define SAVE_V1_SIZE offsetof(SaveData, arcadeBest)   // version 1 saves end where the arcade fields begin
+#define SAVE_V2_SIZE offsetof(SaveData, jumpBest)     // version 2 saves end where Jump's fields begin
 // Flash carts and emulators look for this text to know the game saves to SRAM.
 const char saveTypeTag[] __attribute__((aligned(4), used)) = "SRAM_V113";
 
@@ -25,10 +26,12 @@ void saveInit(void) {
     SaveData t; u32 chk;
     sramRead(&t, 0, sizeof t); sramRead(&chk, sizeof t, 4);
     int ok = t.magic == SAVE_MAGIC && t.version == SAVE_VERSION && chk == sum(&t);
-    if (!ok) {                                       // a version 1 save: keep all of it, the arcade starts at 0
+    // an older save: keep all of it; whatever's been added since starts at 0
+    static const unsigned OLD_SIZE[2] = { SAVE_V2_SIZE, SAVE_V1_SIZE }; static const u32 OLD_VER[2] = { 2, 1 };
+    for (int o = 0; o < 2 && !ok; o++) {
         memset(&t, 0, sizeof t);
-        sramRead(&t, 0, SAVE_V1_SIZE); sramRead(&chk, SAVE_V1_SIZE, 4);
-        if (t.magic == SAVE_MAGIC && t.version == 1 && chk == sumN(&t, SAVE_V1_SIZE)) { t.version = SAVE_VERSION; ok = 1; }
+        sramRead(&t, 0, OLD_SIZE[o]); sramRead(&chk, OLD_SIZE[o], 4);
+        if (t.magic == SAVE_MAGIC && t.version == OLD_VER[o] && chk == sumN(&t, OLD_SIZE[o])) { t.version = SAVE_VERSION; ok = 1; }
     }
     if (ok) {
         sv = t;

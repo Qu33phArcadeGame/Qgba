@@ -273,6 +273,7 @@ int main(void) {
     if (getenv("SIM_COINS")) sv.coins = atoi(getenv("SIM_COINS"));     // (test harness only)
 #endif
     gameInit();
+    jumpInit();
     srand(0x51A);
     u32 vbLast = vbCount; u16 prev = 0;
     while (1) {
@@ -319,6 +320,20 @@ int main(void) {
             case S_STACK_MENU: inputStackMenu(); break;
             case S_STACK: case S_STACK_PAUSE: inputStack(); for (int s = 0; s < steps && screen == S_STACK; s++) updateStack(); break;
             case S_STACK_OVER: inputStackOver(); break;
+            case S_FLIP_MENU: inputFlipMenu(); break;
+            case S_FLIP_LEVELS: inputFlipLevels(); break;
+            case S_FLIP: case S_FLIP_PAUSE: inputFlip(); for (int s = 0; s < steps && screen == S_FLIP; s++) updateFlip(); break;
+            case S_FLIP_OVER: inputFlipOver(); break;
+            case S_DOZER_MENU: inputDozerMenu(); break;
+            case S_DOZER: case S_DOZER_PAUSE: inputDozer(); for (int s = 0; s < steps && screen == S_DOZER; s++) updateDozer(); break;
+            case S_DOZER_OVER: inputDozerOver(); updateDozer(); break;   // (the last pieces finish falling)
+            case S_PIN_MENU: inputPinMenu(); break;
+            case S_PIN: case S_PIN_PAUSE: inputPin(); for (int s = 0; s < steps && screen == S_PIN; s++) updatePin(); break;
+            case S_PIN_OVER: inputPinOver(); break;
+            case S_JUMP_MENU: inputJumpMenu(); break;
+            case S_JUMP_CHARS: inputJumpChars(); break;
+            case S_JUMP: case S_JUMP_PAUSE: inputJump(); for (int s = 0; s < steps && screen == S_JUMP; s++) updateJump(); break;
+            case S_JUMP_OVER: inputJumpOver(); break;
         }
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
         int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
@@ -326,10 +341,14 @@ int main(void) {
         int inFidget = screen >= S_FIDGET_MENU && screen <= S_FIDGET_OVER, onCard = screen >= S_FIDGET && screen <= S_FIDGET_OVER;
         int inBowl = screen >= S_BOWL_MENU && screen <= S_BOWL_OVER, onLane = screen >= S_BOWL && screen <= S_BOWL_OVER;
         int inStack = screen >= S_STACK_MENU && screen <= S_STACK_OVER, onTower = screen >= S_STACK && screen <= S_STACK_OVER;
+        int inFlip = screen >= S_FLIP_MENU && screen <= S_FLIP_OVER, onPads = screen >= S_FLIP && screen <= S_FLIP_OVER;
+        int inDozer = screen >= S_DOZER_MENU && screen <= S_DOZER_OVER, onBed = screen >= S_DOZER && screen <= S_DOZER_OVER;
+        int inPin = screen >= S_PIN_MENU && screen <= S_PIN_OVER, onTable2 = screen >= S_PIN && screen <= S_PIN_OVER;
+        int jumpMenus = screen == S_JUMP_MENU || screen == S_JUMP_CHARS, inJumpGame = screen >= S_JUMP && screen <= S_JUMP_OVER;
         scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : onCard ? PAL_FIDGET
-                     : onLane ? PAL_BOWL : onTower ? PAL_STACK : PAL_MENU);
-        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : inFidget ? OBJ_FIDGET : onLane ? OBJ_BOWL : onTower ? OBJ_STACK : OBJ_MAIN);
-        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : inFidget ? MUS_FIDGET : inBowl ? MUS_BOWL : inStack ? MUS_STACK : MUS_MAIN);   // each arcade game has its own music, menu to results
+                     : onLane ? PAL_BOWL : onTower ? PAL_STACK : onPads ? PAL_FLIP : onBed ? PAL_DOZER : onTable2 ? PAL_PIN : inJumpGame ? PAL_JUMP : PAL_MENU);
+        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : inFidget ? OBJ_FIDGET : onLane ? OBJ_BOWL : onTower ? OBJ_STACK : onPads ? OBJ_FLIP : onBed ? OBJ_DOZER : onTable2 ? OBJ_PIN : inJumpGame ? OBJ_JUMP : jumpMenus ? OBJ_JUMPMENU : OBJ_MAIN);
+        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : inFidget ? MUS_FIDGET : inBowl ? MUS_BOWL : inStack ? MUS_STACK : inFlip ? MUS_FLIP : inDozer ? MUS_DOZER : inPin ? MUS_PIN : MUS_MAIN);   // each arcade game has its own music, menu to results
         platGameView(inMatch ? VIEW_W : onTower ? 160 : 0);
         if (!inMatch) hideSprites();
         clipAll();
@@ -367,6 +386,20 @@ int main(void) {
             case S_STACK_MENU: drawStackMenu(); break;
             case S_STACK: case S_STACK_PAUSE: drawStack(); break;
             case S_STACK_OVER: drawStackOver(); break;
+            case S_FLIP_MENU: drawFlipMenu(); break;
+            case S_FLIP_LEVELS: drawFlipLevels(); break;
+            case S_FLIP: case S_FLIP_PAUSE: drawFlip(); break;
+            case S_FLIP_OVER: drawFlipOver(); break;
+            case S_DOZER_MENU: drawDozerMenu(); break;
+            case S_DOZER: case S_DOZER_PAUSE: drawDozer(); break;
+            case S_DOZER_OVER: drawDozerOver(); break;
+            case S_PIN_MENU: drawPinMenu(); break;
+            case S_PIN: case S_PIN_PAUSE: drawPin(); break;
+            case S_PIN_OVER: drawPinOver(); break;
+            case S_JUMP_MENU: drawJumpMenu(); break;
+            case S_JUMP_CHARS: drawJumpChars(); break;
+            case S_JUMP: case S_JUMP_PAUSE: drawJump(); break;
+            case S_JUMP_OVER: drawJumpOver(); break;
         }
         drawToast();
         platFlip();

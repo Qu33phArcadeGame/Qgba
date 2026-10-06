@@ -321,7 +321,7 @@ void bowlObjLoad(void) {
 // The DS draws back to front (later on top); the GBA puts the first sprite on top, so each
 // frame's sprites are collected in the DS's order and written out reversed.
 typedef struct { u16 a0, a1, a2; s16 pa, pb, pc, pd; u8 affine; } Spr;
-static Spr sl[48]; static int nsl;
+static Spr sl[48] EWRAM_BSS; static int nsl;
 // a turned, scaled sprite; dbl gives it the double-size box (needed only when the turned
 // picture would spill out of its own box: it costs twice the line budget)
 static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see, int dbl) {

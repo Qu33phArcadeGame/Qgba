@@ -78,7 +78,7 @@ static void olySpecialNew(void) {
 }
 
 // ── nation select: D-pad to pick, A to confirm ────────────────────────────
-static Btn natB[NATION_COUNT];
+static Btn natB[NATION_COUNT] EWRAM_BSS;
 static void natLayout(void) {
     for (int i = 0; i < NATION_COUNT; i++) {
         natB[i].x = 3 + (i % 3) * 79; natB[i].y = 31 + (i / 3) * 21; natB[i].w = 76; natB[i].h = 20;

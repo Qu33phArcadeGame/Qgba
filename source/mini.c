@@ -13,7 +13,7 @@
 
 // ══ ARCADE MENU ═══════════════════════════════════════════════════════════
 static const char *ARC_NAME[ARC_COUNT] = { "MINI QU33PH", "QU33PH-BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
-static const int ARC_READY[ARC_COUNT] = { 1, 1, 1, 1, 1, 0, 0, 0, 0 };
+static const int ARC_READY[ARC_COUNT] = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
 static const char *ARC_BLURB[ARC_COUNT] = { "four mini markers, three tables", "three machines, nine markers", "spinner air hockey",
     "ten frames, marker pins", "build the tower", "flick from pad to pad", "coin pusher", "climb, run, bounce & flap", "the ball is a marker" };
 static const char *CAB_LABEL[ARC_COUNT] = { "MINI", "BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
@@ -66,6 +66,10 @@ void inputArcade(void) {
         else if (g == ARC_FIDGET) goScreen(S_FIDGET_MENU);
         else if (g == ARC_BOWLING) goScreen(S_BOWL_MENU);
         else if (g == ARC_STACK) goScreen(S_STACK_MENU);
+        else if (g == ARC_FLIP) goScreen(S_FLIP_MENU);
+        else if (g == ARC_DOZER) goScreen(S_DOZER_MENU);
+        else if (g == ARC_PINBALL) goScreen(S_PIN_MENU);
+        else if (g == ARC_JUMP) goScreen(S_JUMP_MENU);
         else arcMsgT = 120;
     }
 }

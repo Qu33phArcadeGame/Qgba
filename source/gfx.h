@@ -102,6 +102,120 @@ extern const uint8_t st_v2[1024];
 extern const uint16_t st_v2_pal[16];
 extern const uint8_t st_h2[1024];
 extern const uint16_t st_h2_pal[16];
+#define FLW 548
+#define FL_Y0 90
+extern const uint8_t fl8[4][160 * FLW];   // Flip's backdrop (4 copies, shifted 0-3 px), palette 64-255
+extern const uint16_t fl_pal[192];
+extern const uint8_t fl_p0[1024];
+extern const uint16_t fl_p0_pal[16];
+extern const uint8_t fl_p1[1024];
+extern const uint16_t fl_p1_pal[16];
+extern const uint8_t fl_p2[1024];
+extern const uint16_t fl_p2_pal[16];
+extern const uint8_t fl_m[512];
+extern const uint16_t fl_m_pal[16];
+#define DZ_W 148
+#define DZ_Y0 56
+extern const uint8_t dz8[DZ_W * 160];   // Dozer's cabinet, palette 64-255
+extern const uint16_t dz_pal8[192];
+#define DZC_MIN 2
+#define DZC_MAX 14
+extern const uint8_t *const dzcoin[13];   // coins 2-14 across (82% as tall), 0 see-through
+extern const uint8_t dz_m0[128];
+extern const uint16_t dz_m0_pal[16];
+extern const uint8_t dz_m1[128];
+extern const uint16_t dz_m1_pal[16];
+extern const uint8_t dz_m2[128];
+extern const uint16_t dz_m2_pal[16];
+#define PBT_W 152
+#define PBT_Y0 25
+#define PBT_S 0.581818f
+extern const uint8_t pb8[152 * 160];   // Pinball's table, palette 64-255
+extern const uint16_t pb_pal8[192];
+extern const uint8_t pb_ball0[256];
+extern const uint16_t pb_ball0_pal[16];
+extern const uint8_t pb_ball1[256];
+extern const uint16_t pb_ball1_pal[16];
+extern const uint8_t pb_fl[256];
+extern const uint16_t pb_fl_pal[16];
+extern const uint8_t pb_flm[256];
+extern const uint16_t pb_flm_pal[16];
+// Jump: runner k pose p (0 stand, 1 run, 2 jump) jr_k_p (32x32); standing markers jo_k (16x32);
+// flock jf_0-11 (16x16: 2 eggs, 5 peeking, 5 chicks); the MEGA pad jmega (32x32)
+extern const uint8_t jr_0_0[512];
+extern const uint16_t jr_0_0_pal[16];
+extern const uint8_t jr_0_1[512];
+extern const uint16_t jr_0_1_pal[16];
+extern const uint8_t jr_0_2[512];
+extern const uint16_t jr_0_2_pal[16];
+extern const uint8_t jr_1_0[512];
+extern const uint16_t jr_1_0_pal[16];
+extern const uint8_t jr_1_1[512];
+extern const uint16_t jr_1_1_pal[16];
+extern const uint8_t jr_1_2[512];
+extern const uint16_t jr_1_2_pal[16];
+extern const uint8_t jr_2_0[512];
+extern const uint16_t jr_2_0_pal[16];
+extern const uint8_t jr_2_1[512];
+extern const uint16_t jr_2_1_pal[16];
+extern const uint8_t jr_2_2[512];
+extern const uint16_t jr_2_2_pal[16];
+extern const uint8_t jr_3_0[512];
+extern const uint16_t jr_3_0_pal[16];
+extern const uint8_t jr_3_1[512];
+extern const uint16_t jr_3_1_pal[16];
+extern const uint8_t jr_3_2[512];
+extern const uint16_t jr_3_2_pal[16];
+extern const uint8_t jr_4_0[512];
+extern const uint16_t jr_4_0_pal[16];
+extern const uint8_t jr_4_1[512];
+extern const uint16_t jr_4_1_pal[16];
+extern const uint8_t jr_4_2[512];
+extern const uint16_t jr_4_2_pal[16];
+extern const uint8_t jr_5_0[512];
+extern const uint16_t jr_5_0_pal[16];
+extern const uint8_t jr_5_1[512];
+extern const uint16_t jr_5_1_pal[16];
+extern const uint8_t jr_5_2[512];
+extern const uint16_t jr_5_2_pal[16];
+extern const uint8_t jr_6_0[512];
+extern const uint16_t jr_6_0_pal[16];
+extern const uint8_t jr_6_1[512];
+extern const uint16_t jr_6_1_pal[16];
+extern const uint8_t jr_6_2[512];
+extern const uint16_t jr_6_2_pal[16];
+extern const uint8_t jo_0[256];
+extern const uint16_t jo_0_pal[16];
+extern const uint8_t jo_1[256];
+extern const uint16_t jo_1_pal[16];
+extern const uint8_t jo_2[256];
+extern const uint16_t jo_2_pal[16];
+extern const uint8_t jf_0[128];
+extern const uint16_t jf_0_pal[16];
+extern const uint8_t jf_1[128];
+extern const uint16_t jf_1_pal[16];
+extern const uint8_t jf_2[128];
+extern const uint16_t jf_2_pal[16];
+extern const uint8_t jf_3[128];
+extern const uint16_t jf_3_pal[16];
+extern const uint8_t jf_4[128];
+extern const uint16_t jf_4_pal[16];
+extern const uint8_t jf_5[128];
+extern const uint16_t jf_5_pal[16];
+extern const uint8_t jf_6[128];
+extern const uint16_t jf_6_pal[16];
+extern const uint8_t jf_7[128];
+extern const uint16_t jf_7_pal[16];
+extern const uint8_t jf_8[128];
+extern const uint16_t jf_8_pal[16];
+extern const uint8_t jf_9[128];
+extern const uint16_t jf_9_pal[16];
+extern const uint8_t jf_10[128];
+extern const uint16_t jf_10_pal[16];
+extern const uint8_t jf_11[128];
+extern const uint16_t jf_11_pal[16];
+extern const uint8_t jmega[512];
+extern const uint16_t jmega_pal[16];
 extern const uint8_t mm_shadow[256];          // 32x16, colour 1
 // PlinQu33ph markers: red, green 32x32; blue 64x32 (4bpp tiles)
 extern const uint8_t pm_red[512];

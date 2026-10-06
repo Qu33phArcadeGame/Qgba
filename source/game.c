@@ -59,7 +59,7 @@ void sfxPlop(void) { play(snd_plop, SND_PLOP_LEN); }
 static int musicOnNow, musicTrack = MUS_MAIN;
 void musicStart(void) {
     if (musicOnNow || !sv.musicOn) return;
-    if (musicTrack == MUS_MINI) sndMusic(ms_music, MS_MUSIC_LEN); else if (musicTrack == MUS_BALL) sndMusic(bs_music, BS_MUSIC_LEN); else if (musicTrack == MUS_FIDGET) sndMusic(fs_music, FS_MUSIC_LEN); else if (musicTrack == MUS_BOWL) sndMusic(bw_music, BW_MUSIC_LEN); else if (musicTrack == MUS_STACK) sndMusic(st_music, ST_MUSIC_LEN); else sndMusic(snd_music, SND_MUSIC_LEN);
+    if (musicTrack == MUS_MINI) sndMusic(ms_music, MS_MUSIC_LEN); else if (musicTrack == MUS_BALL) sndMusic(bs_music, BS_MUSIC_LEN); else if (musicTrack == MUS_FIDGET) sndMusic(fs_music, FS_MUSIC_LEN); else if (musicTrack == MUS_BOWL) sndMusic(bw_music, BW_MUSIC_LEN); else if (musicTrack == MUS_STACK) sndMusic(st_music, ST_MUSIC_LEN); else if (musicTrack == MUS_FLIP) sndMusic(fl_music, FL_MUSIC_LEN); else if (musicTrack == MUS_DOZER) sndMusic(dz_music, DZ_MUSIC_LEN); else if (musicTrack == MUS_PIN) sndMusic(pb_music, PB_MUSIC_LEN); else sndMusic(snd_music, SND_MUSIC_LEN);
     musicOnNow = 1;
 }
 void musicSet(int t) { if (t != musicTrack) { musicStop(); musicTrack = t; } musicStart(); }
@@ -254,6 +254,11 @@ void objSet(int set) {
     if (set == OBJ_FIDGET) { fidgetObjLoad(); return; }
     if (set == OBJ_BOWL) { bowlObjLoad(); return; }
     if (set == OBJ_STACK) { stackObjLoad(); return; }
+    if (set == OBJ_FLIP) { flipObjLoad(); return; }
+    if (set == OBJ_DOZER) { dozerObjLoad(); return; }
+    if (set == OBJ_PIN) { pinObjLoad(); return; }
+    if (set == OBJ_JUMP) { jumpObjLoad(); return; }
+    if (set == OBJ_JUMPMENU) { jumpMenuObjLoad(); return; }
     platObjTiles(T_GREEN, obj_mk_green, 2048); platObjTiles(T_RED, obj_mk_red, 2048);
     platObjTiles(T_BLUE, obj_mk_blue, 2048); platObjTiles(T_CHAIR, obj_chair, 2048);
     platObjTiles(T_GLOW, glow_mk_green, 2048); platObjTiles(T_GLOW + 64, glow_mk_red, 2048); platObjTiles(T_GLOW + 128, glow_mk_blue, 2048);

@@ -71,7 +71,9 @@ IWRAM_FN void sramWrite(int off, const void *src, int n);
 enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME, S_SLOT, S_PLINKO,
        S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER, S_BALL_MENU, S_BALL, S_BALL_PAUSE, S_BALL_OVER,
        S_FIDGET_MENU, S_FIDGET, S_FIDGET_PAUSE, S_FIDGET_OVER, S_BOWL_MENU, S_BOWL, S_BOWL_PAUSE, S_BOWL_OVER,
-       S_STACK_MENU, S_STACK, S_STACK_PAUSE, S_STACK_OVER };
+       S_STACK_MENU, S_STACK, S_STACK_PAUSE, S_STACK_OVER, S_FLIP_MENU, S_FLIP_LEVELS, S_FLIP, S_FLIP_PAUSE, S_FLIP_OVER,
+       S_DOZER_MENU, S_DOZER, S_DOZER_PAUSE, S_DOZER_OVER, S_PIN_MENU, S_PIN, S_PIN_PAUSE, S_PIN_OVER,
+       S_JUMP_MENU, S_JUMP_CHARS, S_JUMP, S_JUMP_PAUSE, S_JUMP_OVER };
 extern int screen;
 enum { M_SINGLE = 1, M_TWO = 2, M_OLYMPICS = 3 };
 extern int mode;
@@ -87,9 +89,13 @@ typedef struct {
     char name[9];
     int coins, coinsEarned, coinsSpent, slotSpins, slotWins, slotLost;   // (took 6 of the spare slots: older saves read 0)
     int ballBest[3];               // Qu33ph-Ball's best on each machine (took 3 spare slots)
-    u32 spare[7];                  // room to grow
+    u32 flipTiers[3];              // Flip: each level's grade, 2 bits a level (took 6 more)
+    int flipDone, flipBest, flipBestP;
+    u32 spare[1];                  // room to grow
     // ── added in save version 2 (the arcade). Version 1 saves load untouched; these start at 0.
     int arcadeBest[9], arcadePlays[9];   // one slot per arcade game (ARC_*)
+    // ── added in save version 3 (Jump). Older saves load untouched; these start at 0.
+    int jumpBest[4], jumpChar;           // Jump: each mode's best, your runner
 } SaveData;
 enum { ARC_MINI, ARC_BALL, ARC_FIDGET, ARC_BOWLING, ARC_STACK, ARC_FLIP, ARC_DOZER, ARC_JUMP, ARC_PINBALL, ARC_COUNT };
 extern SaveData sv;
@@ -125,7 +131,7 @@ void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
-enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BOWL, PAL_STACK, PAL_BALL /* +machine: keep last */ };
+enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BOWL, PAL_STACK, PAL_FLIP, PAL_DOZER, PAL_PIN, PAL_JUMP, PAL_BALL /* +machine: keep last */ };
 void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
 IWRAM_FN void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
 IWRAM_FN void stipple(int x, int y, int w, int h, int c);            // a checkerboard of colour c (dims what's under it)
@@ -140,9 +146,9 @@ int  btnInput(Btn *b, int n, int *sel, int cols);   // returns pressed index or 
 // ── sound (sound in game.c) ───────────────────────────────────────────────
 void sfxThrow(int orient); void sfxPeef(int orient); void sfxPlop(void);
 void musicStart(void); void musicStop(void); void musicToggle(void);
-enum { MUS_MAIN, MUS_MINI, MUS_BALL, MUS_FIDGET, MUS_BOWL, MUS_STACK };
+enum { MUS_MAIN, MUS_MINI, MUS_BALL, MUS_FIDGET, MUS_BOWL, MUS_STACK, MUS_FLIP, MUS_DOZER, MUS_PIN };
 void musicSet(int track);          // switch tracks (restarts only if it changes)
-enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL, OBJ_FIDGET, OBJ_BOWL, OBJ_STACK };
+enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL, OBJ_FIDGET, OBJ_BOWL, OBJ_STACK, OBJ_FLIP, OBJ_DOZER, OBJ_PIN, OBJ_JUMP, OBJ_JUMPMENU };
 void objSet(int set);              // the sprite pictures this screen needs (loaded when it changes)
 
 // ── the match (game.c) ────────────────────────────────────────────────────
@@ -194,6 +200,23 @@ void drawStackMenu(void); void inputStackMenu(void);
 void drawStack(void); void inputStack(void); void updateStack(void);
 void drawStackOver(void); void inputStackOver(void);
 void stackObjLoad(void);
+void drawFlipMenu(void); void inputFlipMenu(void); void drawFlipLevels(void); void inputFlipLevels(void);
+void drawFlip(void); void inputFlip(void); void updateFlip(void);
+void drawFlipOver(void); void inputFlipOver(void);
+void flipObjLoad(void);
+void drawDozerMenu(void); void inputDozerMenu(void);
+void drawDozer(void); void inputDozer(void); void updateDozer(void);
+void drawDozerOver(void); void inputDozerOver(void);
+void dozerObjLoad(void);
+void drawPinMenu(void); void inputPinMenu(void);
+void drawPin(void); void inputPin(void); void updatePin(void);
+void drawPinOver(void); void inputPinOver(void);
+void pinObjLoad(void);
+void drawJumpMenu(void); void inputJumpMenu(void); void drawJumpChars(void); void inputJumpChars(void);
+void drawJump(void); void inputJump(void); void updateJump(void);
+void drawJumpOver(void); void inputJumpOver(void);
+void jumpObjLoad(void); void jumpMenuObjLoad(void); void jumpInit(void);
+extern u16 jump_pal[192];
 
 // ── toast: short message (new high score) ─────────────────────────────────
 void toast(const char *a, const char *b);

@@ -138,3 +138,31 @@ extern const int8_t bw_music[];
 #define BW_MUSIC_LEN 450000
 extern const int8_t st_music[];
 #define ST_MUSIC_LEN 450000
+extern const int8_t fs2_miss[];
+#define FS2_MISS_LEN 26624
+extern const int8_t fl_music[];
+#define FL_MUSIC_LEN 450000
+extern const int8_t dz_s0[];
+#define DZ_S0_LEN 19456
+extern const int8_t dz_s1[];
+#define DZ_S1_LEN 16384
+extern const int8_t dz_s2[];
+#define DZ_S2_LEN 16384
+extern const int8_t dz_s3[];
+#define DZ_S3_LEN 23552
+extern const int8_t dz_s4[];
+#define DZ_S4_LEN 18432
+extern const int8_t dz_s5[];
+#define DZ_S5_LEN 22528
+extern const int8_t dz_s6[];
+#define DZ_S6_LEN 26282
+extern const int8_t dz_s7[];
+#define DZ_S7_LEN 33792
+extern const int8_t dz_music[];
+#define DZ_MUSIC_LEN 450000
+extern const int8_t pb_snd[];
+#define PB_SND_LEN 8533
+extern const int8_t pb_music[];
+#define PB_MUSIC_LEN 450000
+extern const int8_t js_hop[];
+#define JS_HOP_LEN 2048
