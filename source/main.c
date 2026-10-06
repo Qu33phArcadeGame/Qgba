@@ -316,16 +316,21 @@ int main(void) {
             case S_BOWL_MENU: inputBowlMenu(); break;
             case S_BOWL: case S_BOWL_PAUSE: inputBowl(); for (int s = 0; s < steps && screen == S_BOWL; s++) updateBowl(); break;
             case S_BOWL_OVER: inputBowlOver(); break;
+            case S_STACK_MENU: inputStackMenu(); break;
+            case S_STACK: case S_STACK_PAUSE: inputStack(); for (int s = 0; s < steps && screen == S_STACK; s++) updateStack(); break;
+            case S_STACK_OVER: inputStackOver(); break;
         }
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
         int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
         int inBall = screen >= S_BALL_MENU && screen <= S_BALL_OVER, onMachine = screen >= S_BALL && screen <= S_BALL_OVER;
         int inFidget = screen >= S_FIDGET_MENU && screen <= S_FIDGET_OVER, onCard = screen >= S_FIDGET && screen <= S_FIDGET_OVER;
         int inBowl = screen >= S_BOWL_MENU && screen <= S_BOWL_OVER, onLane = screen >= S_BOWL && screen <= S_BOWL_OVER;
-        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : onCard ? PAL_FIDGET : onLane ? PAL_BOWL : PAL_MENU);
-        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : inFidget ? OBJ_FIDGET : onLane ? OBJ_BOWL : OBJ_MAIN);
-        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : inFidget ? MUS_FIDGET : inBowl ? MUS_BOWL : MUS_MAIN);   // each arcade game has its own music, menu to results
-        platGameView(inMatch);
+        int inStack = screen >= S_STACK_MENU && screen <= S_STACK_OVER, onTower = screen >= S_STACK && screen <= S_STACK_OVER;
+        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : onCard ? PAL_FIDGET
+                     : onLane ? PAL_BOWL : onTower ? PAL_STACK : PAL_MENU);
+        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : inFidget ? OBJ_FIDGET : onLane ? OBJ_BOWL : onTower ? OBJ_STACK : OBJ_MAIN);
+        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : inFidget ? MUS_FIDGET : inBowl ? MUS_BOWL : inStack ? MUS_STACK : MUS_MAIN);   // each arcade game has its own music, menu to results
+        platGameView(inMatch ? VIEW_W : onTower ? 160 : 0);
         if (!inMatch) hideSprites();
         clipAll();
         switch (screen) {
@@ -359,6 +364,9 @@ int main(void) {
             case S_BOWL_MENU: drawBowlMenu(); break;
             case S_BOWL: case S_BOWL_PAUSE: drawBowl(); break;
             case S_BOWL_OVER: drawBowlOver(); break;
+            case S_STACK_MENU: drawStackMenu(); break;
+            case S_STACK: case S_STACK_PAUSE: drawStack(); break;
+            case S_STACK_OVER: drawStackOver(); break;
         }
         drawToast();
         platFlip();

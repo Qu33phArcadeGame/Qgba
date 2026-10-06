@@ -49,7 +49,7 @@ void scenePalette(int which) {
     static int cur = -1;
     if (cur == which) return;
     cur = which;
-    memcpy(&bgPal[64], which >= PAL_BALL ? bb_pal[which - PAL_BALL] : which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : which == PAL_FIDGET ? fd_pal : which == PAL_BOWL ? bwl_pal : logo_pal, 192 * 2);
+    memcpy(&bgPal[64], which >= PAL_BALL ? bb_pal[which - PAL_BALL] : which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : which == PAL_FIDGET ? fd_pal : which == PAL_BOWL ? bwl_pal : which == PAL_STACK ? stw_pal : logo_pal, 192 * 2);
 }
 
 // ── pixels ────────────────────────────────────────────────────────────────

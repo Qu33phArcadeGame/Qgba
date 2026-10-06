@@ -55,7 +55,7 @@ void platInit(void);
 void platFlip(void);               // wait for the blank, show the finished page, send sprites + palettes
 void platObjTiles(int tile, const void *src, int bytes);   // sprite pictures (tile = 32-byte units)
 u16  platKeys(void);
-void platGameView(int on);         // match view: sprites only over the field column, see-through sprites blend
+void platGameView(int w);          // sprites only over the left w columns (0: anywhere)
 void copy32(void *dst, const void *src, int words);
 void fill32(void *dst, u32 v, int words);
 // sound: channel A plays the music (10000 samples a second), channel B the effects (16000)
@@ -70,7 +70,8 @@ IWRAM_FN void sramWrite(int off, const void *src, int n);
 // ── screens ───────────────────────────────────────────────────────────────
 enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME, S_SLOT, S_PLINKO,
        S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER, S_BALL_MENU, S_BALL, S_BALL_PAUSE, S_BALL_OVER,
-       S_FIDGET_MENU, S_FIDGET, S_FIDGET_PAUSE, S_FIDGET_OVER, S_BOWL_MENU, S_BOWL, S_BOWL_PAUSE, S_BOWL_OVER };
+       S_FIDGET_MENU, S_FIDGET, S_FIDGET_PAUSE, S_FIDGET_OVER, S_BOWL_MENU, S_BOWL, S_BOWL_PAUSE, S_BOWL_OVER,
+       S_STACK_MENU, S_STACK, S_STACK_PAUSE, S_STACK_OVER };
 extern int screen;
 enum { M_SINGLE = 1, M_TWO = 2, M_OLYMPICS = 3 };
 extern int mode;
@@ -124,7 +125,7 @@ void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
-enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BOWL, PAL_BALL /* +machine: keep last */ };
+enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BOWL, PAL_STACK, PAL_BALL /* +machine: keep last */ };
 void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
 IWRAM_FN void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
 IWRAM_FN void stipple(int x, int y, int w, int h, int c);            // a checkerboard of colour c (dims what's under it)
@@ -139,9 +140,9 @@ int  btnInput(Btn *b, int n, int *sel, int cols);   // returns pressed index or 
 // ── sound (sound in game.c) ───────────────────────────────────────────────
 void sfxThrow(int orient); void sfxPeef(int orient); void sfxPlop(void);
 void musicStart(void); void musicStop(void); void musicToggle(void);
-enum { MUS_MAIN, MUS_MINI, MUS_BALL, MUS_FIDGET, MUS_BOWL };
+enum { MUS_MAIN, MUS_MINI, MUS_BALL, MUS_FIDGET, MUS_BOWL, MUS_STACK };
 void musicSet(int track);          // switch tracks (restarts only if it changes)
-enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL, OBJ_FIDGET, OBJ_BOWL };
+enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL, OBJ_FIDGET, OBJ_BOWL, OBJ_STACK };
 void objSet(int set);              // the sprite pictures this screen needs (loaded when it changes)
 
 // ── the match (game.c) ────────────────────────────────────────────────────
@@ -189,6 +190,10 @@ void drawBowlMenu(void); void inputBowlMenu(void);
 void drawBowl(void); void inputBowl(void); void updateBowl(void);
 void drawBowlOver(void); void inputBowlOver(void);
 void bowlObjLoad(void);
+void drawStackMenu(void); void inputStackMenu(void);
+void drawStack(void); void inputStack(void); void updateStack(void);
+void drawStackOver(void); void inputStackOver(void);
+void stackObjLoad(void);
 
 // ── toast: short message (new high score) ─────────────────────────────────
 void toast(const char *a, const char *b);

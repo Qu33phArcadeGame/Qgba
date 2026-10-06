@@ -298,36 +298,61 @@ void inputBowl(void) {
 }
 
 // ── sprites ───────────────────────────────────────────────────────────────
-// tiles: the three pin markers (32x64), the main game's chair (64x64), the MEGA card (32x16),
-// the shadow (32x16); palettes 0-2 the pins, 3 the chair, 4 the card, 5 the shadow
-enum { T_PIN = 512, T_WCHAIR = 608, T_MEGA = 672, T_WSH = 680 };
+// tiles: the three markers full size (32x64: your marker), the main game's chair (64x64), the
+// MEGA card (32x16), the shadow (32x16), the pins pre-shrunk (16x32), the ball return's lying
+// markers (16x8); palettes 0-2 the markers, 3 the chair, 4 the card, 5 the shadow, 6-8 the
+// pins, 9-11 the ball return.
+// (The GBA can only draw so many sprite pixels on each screen line: the pins and the ball
+//  return use small pictures so your marker always fits.)
+enum { T_PIN = 512, T_WCHAIR = 608, T_MEGA = 672, T_WSH = 680, T_SPIN = 688, T_Q = 712 };
 void bowlObjLoad(void) {
     const u8 *P[3] = { bw_pin0, bw_pin1, bw_pin2 }; const u16 *PP[3] = { bw_pin0_pal, bw_pin1_pal, bw_pin2_pal };
     for (int i = 0; i < 3; i++) { platObjTiles(T_PIN + i * 32, P[i], 1024); memcpy(&objPal[i * 16], PP[i], 32); }
     platObjTiles(T_WCHAIR, obj_chair, 2048); memcpy(&objPal[48], obj_chair_pal, 32);
     platObjTiles(T_MEGA, bw_mega, 256); memcpy(&objPal[64], bw_mega_pal, 32);
     platObjTiles(T_WSH, mm_shadow, 256); objPal[80 + 1] = 0;
+    const u8 *S[3] = { bw_spin0, bw_spin1, bw_spin2 }, *Q[3] = { bw_q0, bw_q1, bw_q2 };
+    const u16 *SP[3] = { bw_spin0_pal, bw_spin1_pal, bw_spin2_pal }, *QP[3] = { bw_q0_pal, bw_q1_pal, bw_q2_pal };
+    for (int i = 0; i < 3; i++) {
+        platObjTiles(T_SPIN + i * 8, S[i], 256); memcpy(&objPal[(6 + i) * 16], SP[i], 32);
+        platObjTiles(T_Q + i * 2, Q[i], 64); memcpy(&objPal[(9 + i) * 16], QP[i], 32);
+    }
 }
 // The DS draws back to front (later on top); the GBA puts the first sprite on top, so each
 // frame's sprites are collected in the DS's order and written out reversed.
-typedef struct { u16 a0, a1, a2; s16 pa, pb, pc, pd; } Spr;
-static Spr sl[32]; static int nsl;
-static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see) {
-    if (nsl >= 32 || sx < 0.02f || sy < 0.02f) return;
+typedef struct { u16 a0, a1, a2; s16 pa, pb, pc, pd; u8 affine; } Spr;
+static Spr sl[48]; static int nsl;
+// a turned, scaled sprite; dbl gives it the double-size box (needed only when the turned
+// picture would spill out of its own box: it costs twice the line budget)
+static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see, int dbl) {
+    if (nsl >= 48 || sx < 0.02f || sy < 0.02f) return;
     if (cx < -w * 2 || cx > SW + w * 2 || cy < -h * 2 || cy > SH + h * 2) return;
     Spr *o = &sl[nsl++];
     float c = fcos(ang), s = fsin(ang);
     o->pa = (s16)(c / sx * 256); o->pb = (s16)(s / sx * 256); o->pc = (s16)(-s / sy * 256); o->pd = (s16)(c / sy * 256);
-    o->a0 = (u16)(((cy - h) & 0xFF) | 0x0300 | (see ? 0x0400 : 0) | (shape << 14));
-    o->a1 = (u16)(((cx - w) & 0x1FF) | (size << 14));
-    o->a2 = (u16)(tile | (pal << 12));
+    int bw = dbl ? w : w / 2, bh = dbl ? h : h / 2;
+    o->a0 = (u16)(((cy - bh) & 0xFF) | (dbl ? 0x0300 : 0x0100) | (see ? 0x0400 : 0) | (shape << 14));
+    o->a1 = (u16)(((cx - bw) & 0x1FF) | (size << 14));
+    o->a2 = (u16)(tile | (pal << 12)); o->affine = 1;
+}
+static void plain(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, int see) {   // a plain (unturned) sprite
+    if (nsl >= 48) return;
+    Spr *o = &sl[nsl++];
+    o->a0 = (u16)(((cy - h / 2) & 0xFF) | (see ? 0x0400 : 0) | (shape << 14));
+    o->a1 = (u16)(((cx - w / 2) & 0x1FF) | (size << 14));
+    o->a2 = (u16)(tile | (pal << 12)); o->affine = 0;
 }
 static void flushSprites(void) {
     hideSprites();
-    for (int k = 0; k < nsl; k++) {
+    int m = 0;
+    for (int k = 0; k < nsl && k < 128; k++) {
         int i = k; Spr *o = &sl[nsl - 1 - k];
-        oam[i].a0 = o->a0; oam[i].a1 = (u16)(o->a1 | (i << 9)); oam[i].a2 = o->a2;
-        oam[i * 4].a3 = (u16)o->pa; oam[i * 4 + 1].a3 = (u16)o->pb; oam[i * 4 + 2].a3 = (u16)o->pc; oam[i * 4 + 3].a3 = (u16)o->pd;
+        oam[i].a0 = o->a0; oam[i].a1 = o->a1; oam[i].a2 = o->a2;
+        if (o->affine && m < 32) {
+            oam[i].a1 = (u16)(o->a1 | (m << 9));
+            oam[m * 4].a3 = (u16)o->pa; oam[m * 4 + 1].a3 = (u16)o->pb; oam[m * 4 + 2].a3 = (u16)o->pc; oam[m * 4 + 3].a3 = (u16)o->pd;
+            m++;
+        } else if (o->affine) oam[i].a0 = 0x0200;      // (out of turn tables: skip)
     }
 }
 
@@ -336,12 +361,16 @@ static void flushSprites(void) {
 #define GYb(y) ((int)(((y) - BWL_Y0) * BWL_S))
 #define PX0 (BWL_W + 1)
 #define PW (SW - PX0)
-static void marker(int c, float x, float y, float h, float rot, int stip) {    // a marker 'h' DS pixels tall at x,y
-    aff(T_PIN + c * 32, c, 2, 3, 32, 64, GXb(x), GYb(y), h * BWL_S / 52, h * BWL_S / 52, rot, stip);
+static void marker(int c, float x, float y, float h, float rot, int stip) {    // your marker, 'h' DS pixels tall at x,y
+    aff(T_PIN + c * 32, c, 2, 3, 32, 64, GXb(x), GYb(y), h * BWL_S / 52, h * BWL_S / 52, rot, stip, 1);
+}
+static void pinMarker(int c, float x, float y, float h, float rot, int stip) {  // a pin: the small picture (16 tall), a touch bigger than true
+    float k = h * BWL_S * 1.2f / 16;
+    aff(T_SPIN + c * 8, 6 + c, 2, 2, 16, 32, GXb(x), GYb(y), k, k, rot, stip, k > 0.9f);
 }
 static void shadow(float x, float y, float h, float rot) {       // the capsule's shadow: a flat oval, longer when it's turned
     float len = (fabsf_(fsin(rot)) * 0.92f + 0.30f) * h * BWL_S, wid = h * 0.10f * BWL_S + 1;
-    aff(T_WSH, 5, 1, 2, 32, 16, GXb(x), GYb(y + h * 0.09f), len / 32, wid / 16, 0, 1);
+    aff(T_WSH, 5, 1, 2, 32, 16, GXb(x), GYb(y + h * 0.09f), len / 32, wid / 16, 0, 1, len > 30);
 }
 static void drawPins(void) {
     int order[10]; for (int i = 0; i < 10; i++) order[i] = i;
@@ -350,8 +379,8 @@ static void drawPins(void) {
         float v = p->Y / LANE_LEN; if (v < 0 || v > 1.14f) continue;
         float x, y, s; proj(p->X, v < 1.13f ? v : 1.13f, &x, &y, &s);
         float h = AHf * 0.085f * s * 1.9f;
-        if (p->down) { if (p->sink < 0.8f) marker(p->col, x, y + h * 0.16f, h * 0.92f, 1.5707963f + p->rot, p->sink > 0.4f); }
-        else marker(p->col, x, y - h * 0.30f, h, 0, 0);
+        if (p->down) { if (p->sink < 0.8f) pinMarker(p->col, x, y + h * 0.16f, h * 0.92f, 1.5707963f + p->rot, p->sink > 0.4f); }
+        else pinMarker(p->col, x, y - h * 0.30f, h, 0, 0);
     }
 }
 static void fmtFrame(int f, char *marks, int *total) {             // the website's frameView, one frame
@@ -411,7 +440,7 @@ static void drawLaneAndPlay(void) {
     clipX0 = 0; clipX1 = BWL_W; clipY0 = 0; clipY1 = SH;
     // the MEGA card in one of the speaker boxes: lit in the tenth frame
     { int armed = frameNo == 9 && !megaWon;
-      aff(T_MEGA, 4, 1, 2, 32, 16, GXb(AWf * (megaRight ? BOX_R : BOX_L)), GYb(AHf * BOX_Y), BWL_S, BWL_S, 0, !(armed || megaWon)); }
+      aff(T_MEGA, 4, 1, 2, 32, 16, GXb(AWf * (megaRight ? BOX_R : BOX_L)), GYb(AHf * BOX_Y), BWL_S, BWL_S, 0, !(armed || megaWon), 0); }
     drawPins();
     if (haveBall && phase != PH_MEGA) {
         float v = ball.Y / LANE_LEN;
@@ -424,13 +453,13 @@ static void drawLaneAndPlay(void) {
         float v = chr.Y / LANE_LEN;
         if (v >= 0 && v <= 1.16f) { float x, y, s; proj(chr.X, v < 1.15f ? v : 1.15f, &x, &y, &s);
             float h = AHf * 0.085f * s * 2.3f, k = h * BWL_S / 40;
-            aff(T_WCHAIR, 3, 0, 3, 64, 64, GXb(x), GYb(y - h * 0.34f), k, k, chr.rot, 0); }
+            aff(T_WCHAIR, 3, 0, 3, 64, 64, GXb(x), GYb(y - h * 0.34f), k, k, chr.rot, 0, 0); }
     }
     if (flying) {
         float t = megaFly.t / 1.05f; if (t > 1) t = 1; float e = t * t * (3 - 2 * t);
         float tx = AWf * (megaRight ? BOX_R : BOX_L), ty = AHf * BOX_Y;
         float x = megaFly.x0 + (tx - megaFly.x0) * e, y = megaFly.y0 + (ty - megaFly.y0) * e - fsin(t * 3.14159f) * AHf * 0.10f;
-        marker(2, x, y, AHf * 0.045f * (1 - t * 0.45f), t * 10, 0);
+        pinMarker(2, x, y, AHf * 0.045f * (1 - t * 0.45f), t * 10, 0);
     }
     if (phase == PH_AIM) {
         float x, y, s; proj(aimX, 0.012f, &x, &y, &s);
@@ -442,10 +471,11 @@ static void drawLaneAndPlay(void) {
     }
     // the ball return: the ten markers in order, this frame's one bigger (and blinking)
     { float y = AHf * RET_Y, step = (RET_X1 - RET_X0) / 9, h = AHf * 0.030f;
+      (void)h;
       for (int i = 0; i < 10; i++) {
           float x = AWf * (RET_X0 + step * i); int cur = i == frameNo;
           if (cur && ((bFrames / 12) & 1)) for (int j = -4; j <= 4; j++) for (int k = -4; k <= 4; k++) if (j * j + k * k <= 16) pset(GXb(x) + k, GYb(y) + j, GOLD);
-          marker(QUEUE[i], x, y, cur ? h * 1.30f : h * 1.06f, 1.5707963f, i < frameNo);
+          plain(T_Q + QUEUE[i] * 2, 9 + QUEUE[i], 1, 0, 16, 8, GXb(x), GYb(y), i < frameNo);   // (cheap plain sprites)
       } }
     // the best on the cabinet's "High Score:" box
     { char s[12]; sprintf(s, "%d", sv.arcadeBest[ARC_BOWLING]); textS(GXb(AWf * HS_X), GYb(AHf * HS_Y) - 5, s, RED); }

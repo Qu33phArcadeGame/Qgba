@@ -288,14 +288,18 @@ void inputBall(void) {
 }
 
 // ── sprites: the main game's three markers (red, green, blue) and a shadow ──
-enum { T_BR = 512, T_BG = 576, T_BB = 640, T_BSH = 704 };
+enum { T_BR = 512, T_BG = 576, T_BB = 640, T_BSH = 704, T_BQ = 712 };
+// (the queue uses small plain pictures: the GBA can only draw so many sprite pixels per line)
 void ballObjLoad(void) {
     platObjTiles(T_BR, obj_mk_red, 2048); platObjTiles(T_BG, obj_mk_green, 2048); platObjTiles(T_BB, obj_mk_blue, 2048);
     platObjTiles(T_BSH, mm_shadow, 256);
     memcpy(&objPal[0], obj_mk_red_pal, 32); memcpy(&objPal[16], obj_mk_green_pal, 32); memcpy(&objPal[32], obj_mk_blue_pal, 32);
     objPal[48 + 1] = 0;
+    const u8 *Q[3] = { bq_0, bq_1, bq_2 }; const u16 *QP[3] = { bq_0_pal, bq_1_pal, bq_2_pal };
+    for (int i = 0; i < 3; i++) { platObjTiles(T_BQ + i * 4, Q[i], 128); memcpy(&objPal[(4 + i) * 16], QP[i], 32); }
 }
 static int nObj;
+static int nPlain;
 static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see) {
     if (nObj >= 32 || sx < 0.02f || sy < 0.02f) return;
     int i = nObj++;
@@ -304,6 +308,13 @@ static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, in
     oam[i * 4 + 2].a3 = (u16)(s16)(-s / sy * 256); oam[i * 4 + 3].a3 = (u16)(s16)(c / sy * 256);
     oam[i].a0 = (u16)(((cy - h) & 0xFF) | 0x0300 | (see ? 0x0400 : 0) | (shape << 14));
     oam[i].a1 = (u16)(((cx - w) & 0x1FF) | (i << 9) | (size << 14));
+    oam[i].a2 = (u16)(tile | (pal << 12));
+}
+// a plain 16x16 sprite (after the turned ones in the table, so drawn under them)
+static void plain16(int tile, int pal, int cx, int cy, int see) {
+    int i = 32 + nPlain++; if (i >= 128) return;
+    oam[i].a0 = (u16)(((cy - 8) & 0xFF) | (see ? 0x0400 : 0));
+    oam[i].a1 = (u16)(((cx - 8) & 0x1FF) | (1 << 14));
     oam[i].a2 = (u16)(tile | (pal << 12));
 }
 // the DS draws each marker 0.11 of the cabinet's width across (blue, the long one, shrunk to that
@@ -330,7 +341,7 @@ void drawBall(void) {
     if (mach == 2) textSO(GX(0.510f) - textSW("33K") / 2, GY(0.218f) - 5, "33K", C_GOLD);   // the cabinet's unlabelled jackpot
     // (the cabinet's own MARKERS / SCORE / HIGH SCORE boxes are too small to read at this size:
     //  the panel shows them instead)
-    hideSprites(); nObj = 0;
+    hideSprites(); nObj = 0; nPlain = 0;
     int showAim = state == ST_READY && (charging || chargeT > 0) && screen == S_BALL;
     if (state == ST_READY) {
         markerAt(colOf(curIdx), f->sx, f->sy, 1.0f, 0, 0);
@@ -363,7 +374,7 @@ void drawBall(void) {
         }
     }
     // the queue: every marker keeps its own slot, faded
-    for (int k = curIdx + 1; k < TOTAL; k++) markerAt(colOf(k), qx(k), f->queueY, 0.5f, 0, 1);
+    for (int k = curIdx + 1; k < TOTAL; k++) plain16(T_BQ + colOf(k) * 4, 4 + colOf(k), GX(qx(k)), GY(f->queueY), 1);
     if (state == ST_FEED) { float t = ease(feed.t / (float)FEED_DUR);
         markerAt(feed.col, feed.fromX + (f->sx - feed.fromX) * t, f->queueY + (f->sy - f->queueY) * t, 0.5f + 0.5f * t, 0, t < 0.5f); }
     for (int i = 0; i < 8; i++) { Pop *p = &pops[i]; if (p->life <= 0 || p->delay > 0 || p->life < 8) continue;

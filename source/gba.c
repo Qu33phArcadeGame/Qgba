@@ -152,7 +152,10 @@ void platInit(void) {
     REG_IE = 1; REG_IF = 0xFFFF; REG_IME = 1;
     REG_DISPCNT = 0x0004 | 0x0400 | 0x1000 | 0x0040;          // mode 4, the picture, sprites (1D)
 }
-void platGameView(int on) { gameView = on; }
+void platGameView(int w) {               // window 0 = the left w columns: sprites (and blending) only there
+    if (w && w != gameView) REG_WIN0H = (0 << 8) | w;
+    gameView = w;
+}
 static void vblankWait(void) {
 #if defined(__thumb__)
     __asm__ volatile("swi 0x05" ::: "r0", "r1", "r2", "r3", "memory");

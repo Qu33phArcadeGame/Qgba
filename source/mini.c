@@ -13,7 +13,7 @@
 
 // ══ ARCADE MENU ═══════════════════════════════════════════════════════════
 static const char *ARC_NAME[ARC_COUNT] = { "MINI QU33PH", "QU33PH-BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
-static const int ARC_READY[ARC_COUNT] = { 1, 1, 1, 1, 0, 0, 0, 0, 0 };
+static const int ARC_READY[ARC_COUNT] = { 1, 1, 1, 1, 1, 0, 0, 0, 0 };
 static const char *ARC_BLURB[ARC_COUNT] = { "four mini markers, three tables", "three machines, nine markers", "spinner air hockey",
     "ten frames, marker pins", "build the tower", "flick from pad to pad", "coin pusher", "climb, run, bounce & flap", "the ball is a marker" };
 static const char *CAB_LABEL[ARC_COUNT] = { "MINI", "BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
@@ -65,6 +65,7 @@ void inputArcade(void) {
         else if (g == ARC_BALL) goScreen(S_BALL_MENU);
         else if (g == ARC_FIDGET) goScreen(S_FIDGET_MENU);
         else if (g == ARC_BOWLING) goScreen(S_BOWL_MENU);
+        else if (g == ARC_STACK) goScreen(S_STACK_MENU);
         else arcMsgT = 120;
     }
 }
@@ -357,20 +358,26 @@ void miniObjLoad(void) {
 }
 static int nObj;
 // an affine sprite: tile/size/shape, centred on (cx, cy), shrunk to sx x sy of its picture, turned by ang
-static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see) {
+// (dbl: the double-size box, only when a turned picture would spill out of its own box. The GBA
+//  can only draw so many sprite pixels per screen line, and the double box costs twice as much.)
+static void affD(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see, int dbl) {
     if (nObj >= 32 || sx < 0.02f || sy < 0.02f) return;
     int i = nObj++;
     float c = fcos(ang), s = fsin(ang);
     oam[i * 4].a3 = (u16)(s16)(c / sx * 256); oam[i * 4 + 1].a3 = (u16)(s16)(s / sx * 256);
     oam[i * 4 + 2].a3 = (u16)(s16)(-s / sy * 256); oam[i * 4 + 3].a3 = (u16)(s16)(c / sy * 256);
-    oam[i].a0 = (u16)(((cy - h) & 0xFF) | 0x0300 | (see ? 0x0400 : 0) | (shape << 14));        // affine, double size
-    oam[i].a1 = (u16)(((cx - w) & 0x1FF) | (i << 9) | (size << 14));
+    int bw = dbl ? w : w / 2, bh = dbl ? h : h / 2;
+    oam[i].a0 = (u16)(((cy - bh) & 0xFF) | (dbl ? 0x0300 : 0x0100) | (see ? 0x0400 : 0) | (shape << 14));
+    oam[i].a1 = (u16)(((cx - bw) & 0x1FF) | (i << 9) | (size << 14));
     oam[i].a2 = (u16)(tile | (pal << 12));
+}
+static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, int cy, float sx, float sy, float ang, int see) {
+    affD(tile, pal, shape, size, w, h, cx, cy, sx, sy, ang, see, ang != 0 || sx > 1 || sy > 1);
 }
 static void markerAt(float u, float v, float rot, int col) {
     int x, y; float s; proj(u, v, &x, &y, &s);
     float len = MK_LEN * s * 2 * 1.35f, k = len / 48;                     // (the marker picture is 48 tall)
-    aff(T_MM + col * 32, col, 2, 3, 32, 64, x, y, k, k, rot, 0);           // 32x64
+    affD(T_MM + col * 32, col, 2, 3, 32, 64, x, y, k, k, rot, 0, k > 0.62f);   // 32x64 (turned: fits its own box below 0.62)
 }
 static void shadowAt(float u, float v) {                                   // a soft dark oval just below it
     int x, y; float s; proj(u, v, &x, &y, &s);

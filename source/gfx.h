@@ -68,6 +68,40 @@ extern const uint8_t bw_pin2[1024];
 extern const uint16_t bw_pin2_pal[16];
 extern const uint8_t bw_mega[256];
 extern const uint16_t bw_mega_pal[16];
+extern const uint8_t bw_spin0[256];
+extern const uint16_t bw_spin0_pal[16];
+extern const uint8_t bw_q0[64];
+extern const uint16_t bw_q0_pal[16];
+extern const uint8_t bw_spin1[256];
+extern const uint16_t bw_spin1_pal[16];
+extern const uint8_t bw_q1[64];
+extern const uint16_t bw_q1_pal[16];
+extern const uint8_t bw_spin2[256];
+extern const uint16_t bw_spin2_pal[16];
+extern const uint8_t bw_q2[64];
+extern const uint16_t bw_q2_pal[16];
+extern const uint8_t bq_0[128];
+extern const uint16_t bq_0_pal[16];
+extern const uint8_t bq_1[128];
+extern const uint16_t bq_1_pal[16];
+extern const uint8_t bq_2[128];
+extern const uint16_t bq_2_pal[16];
+#define STW_W 160
+#define STW_H 204
+extern const uint8_t stw8[STW_W * STW_H];   // Stack's window backdrop, palette 64-255
+extern const uint16_t stw_pal[192];
+extern const uint8_t st_v0[1024];
+extern const uint16_t st_v0_pal[16];
+extern const uint8_t st_h0[1024];
+extern const uint16_t st_h0_pal[16];
+extern const uint8_t st_v1[1024];
+extern const uint16_t st_v1_pal[16];
+extern const uint8_t st_h1[1024];
+extern const uint16_t st_h1_pal[16];
+extern const uint8_t st_v2[1024];
+extern const uint16_t st_v2_pal[16];
+extern const uint8_t st_h2[1024];
+extern const uint16_t st_h2_pal[16];
 extern const uint8_t mm_shadow[256];          // 32x16, colour 1
 // PlinQu33ph markers: red, green 32x32; blue 64x32 (4bpp tiles)
 extern const uint8_t pm_red[512];

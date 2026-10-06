@@ -136,3 +136,5 @@ extern const int8_t bw_wash[];
 #define BW_WASH_LEN 37546
 extern const int8_t bw_music[];
 #define BW_MUSIC_LEN 450000
+extern const int8_t st_music[];
+#define ST_MUSIC_LEN 450000
