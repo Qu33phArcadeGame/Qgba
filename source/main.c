@@ -310,13 +310,17 @@ int main(void) {
             case S_BALL_MENU: inputBallMenu(); break;
             case S_BALL: case S_BALL_PAUSE: inputBall(); for (int s = 0; s < steps && screen == S_BALL; s++) updateBall(); break;
             case S_BALL_OVER: inputBallOver(); break;
+            case S_FIDGET_MENU: inputFidgetMenu(); break;
+            case S_FIDGET: case S_FIDGET_PAUSE: inputFidget(); for (int s = 0; s < steps && screen == S_FIDGET; s++) updateFidget(); break;
+            case S_FIDGET_OVER: inputFidgetOver(); break;
         }
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
         int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
         int inBall = screen >= S_BALL_MENU && screen <= S_BALL_OVER, onMachine = screen >= S_BALL && screen <= S_BALL_OVER;
-        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : PAL_MENU);
-        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : OBJ_MAIN);
-        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : MUS_MAIN);   // each arcade game has its own music, menu to results
+        int inFidget = screen >= S_FIDGET_MENU && screen <= S_FIDGET_OVER, onCard = screen >= S_FIDGET && screen <= S_FIDGET_OVER;
+        scenePalette(inMatch ? PAL_FIELD : screen == S_SLOT ? PAL_SLOT : onTable ? PAL_MINI : onMachine ? PAL_BALL + ballMachine() : onCard ? PAL_FIDGET : PAL_MENU);
+        objSet(onTable ? OBJ_MINI : onMachine ? OBJ_BALL : inFidget ? OBJ_FIDGET : OBJ_MAIN);
+        musicSet(inMini ? MUS_MINI : inBall ? MUS_BALL : inFidget ? MUS_FIDGET : MUS_MAIN);   // each arcade game has its own music, menu to results
         platGameView(inMatch);
         if (!inMatch) hideSprites();
         clipAll();
@@ -345,6 +349,9 @@ int main(void) {
             case S_BALL_MENU: drawBallMenu(); break;
             case S_BALL: case S_BALL_PAUSE: drawBall(); break;
             case S_BALL_OVER: drawBallOver(); break;
+            case S_FIDGET_MENU: drawFidgetMenu(); break;
+            case S_FIDGET: case S_FIDGET_PAUSE: drawFidget(); break;
+            case S_FIDGET_OVER: drawFidgetOver(); break;
         }
         drawToast();
         platFlip();

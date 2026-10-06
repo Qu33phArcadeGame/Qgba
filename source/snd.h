@@ -64,3 +64,21 @@ extern const int8_t bs_roll[];
 #define BS_ROLL_LEN 22528
 extern const int8_t bs_music[];
 #define BS_MUSIC_LEN 450000
+extern const int8_t fs_hitc1[];
+#define FS_HITC1_LEN 9904
+extern const int8_t fs_hitc2[];
+#define FS_HITC2_LEN 16048
+extern const int8_t fs_hitc3[];
+#define FS_HITC3_LEN 15704
+extern const int8_t fs_hitf1[];
+#define FS_HITF1_LEN 12976
+extern const int8_t fs_hitf2[];
+#define FS_HITF2_LEN 16728
+extern const int8_t fs_hitf3[];
+#define FS_HITF3_LEN 21504
+extern const int8_t fs_oob1[];
+#define FS_OOB1_LEN 16048
+extern const int8_t fs_oob2[];
+#define FS_OOB2_LEN 11264
+extern const int8_t fs_music[];
+#define FS_MUSIC_LEN 450000

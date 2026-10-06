@@ -13,7 +13,7 @@
 
 // ══ ARCADE MENU ═══════════════════════════════════════════════════════════
 static const char *ARC_NAME[ARC_COUNT] = { "MINI QU33PH", "QU33PH-BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
-static const int ARC_READY[ARC_COUNT] = { 1, 1, 0, 0, 0, 0, 0, 0, 0 };
+static const int ARC_READY[ARC_COUNT] = { 1, 1, 1, 0, 0, 0, 0, 0, 0 };
 static const char *ARC_BLURB[ARC_COUNT] = { "four mini markers, three tables", "three machines, nine markers", "spinner air hockey",
     "ten frames, marker pins", "build the tower", "flick from pad to pad", "coin pusher", "climb, run, bounce & flap", "the ball is a marker" };
 static const char *CAB_LABEL[ARC_COUNT] = { "MINI", "BALL", "FIDGET", "BOWLING", "STACK", "FLIP", "DOZER", "JUMP", "PINBALL" };
@@ -27,12 +27,12 @@ static void cabPos(int k, int *x, int *y) {
 void drawArcade(void) {
     fillScreen(DARK);
     textS(4, 2, "ARCADE", GOLD);
-    coinCount(SW - 50, 0, 0);
+    { char c[16]; sprintf(c, "coins %d", sv.coins); textS(SW - 4 - textSW(c), 2, c, GOLD); }
     for (int k = 0; k < 9; k++) {
         int g = SLOT_GAME[k], x, y, on = k == arcSel; cabPos(k, &x, &y);
         if (on) { rect(x - 1, y - 3, 48, 2, GOLD); rect(x - 1, y + 64, 48, 2, GOLD); rect(x - 1, y - 3, 2, 69, GOLD); rect(x + 45, y - 3, 2, 69, GOLD); }
         drawImg(arc8[g], ARC_W, ARC_H, x + 1, y - (on ? 2 : 0));
-        if (!ARC_READY[g]) for (int j = 0; j < ARC_H; j += 1) for (int i = (j & 1); i < ARC_W; i += 2) pset(x + 1 + i, y + j - (on ? 2 : 0), C_DARK);   // not here yet: dimmed
+        if (!ARC_READY[g]) stipple(x + 1, y - (on ? 2 : 0), ARC_W, ARC_H, C_DARK);   // not here yet: dimmed
         const char *l = CAB_LABEL[g];
         textS(x + 23 - textSW(l) / 2, y + 55, l, on ? YELLOW : ARC_READY[g] ? WHITE : GREY);
     }
@@ -63,6 +63,7 @@ void inputArcade(void) {
         int g = SLOT_GAME[arcSel];
         if (g == ARC_MINI) goScreen(S_MINI_MENU);
         else if (g == ARC_BALL) goScreen(S_BALL_MENU);
+        else if (g == ARC_FIDGET) goScreen(S_FIDGET_MENU);
         else arcMsgT = 120;
     }
 }
@@ -334,7 +335,7 @@ void inputMini(void) {
         if (kDown & KEY_A) { charging = 1; ph = 0; power = 0; }
     }
     if (charging) {
-        ph++; float p = (ph % 64) / 32.0f; power = p < 1 ? p : 2 - p;
+        ph++; float p = (ph % 44) / 22.0f; power = p < 1 ? p : 2 - p;
         chargeT = 90;
         if (kDown & KEY_B) charging = 0;
         else if (kUp & KEY_A) { charging = 0; if (canThrow()) launch(power, aimA); }
@@ -398,14 +399,13 @@ static void drawAimGuide(void) {                             // where this throw
 void drawMini(void) {
     shY = 0;
     if (shakeT > 0 && screen == S_MINI) shY = (int)((frand() - 0.5f) * shakeAmt * (shakeT / 0.42f) * 0.5f * MINIT_S);
-    // the table (a shake jolts it up and down), then the panel
+    // the table (a shake jolts it up and down), then the panel: a row at a time, by DMA
     for (int y = 0; y < SH; y++) {
         int sy = y - shY; if (sy < 0) sy = 0; if (sy >= MINIT_H) sy = MINIT_H - 1;
-        u16 *row = &page[y * (SW / 2)]; const u8 *src = &minit8[sy * TW];
-        for (int x = 0; x < TW - 1; x += 2) row[x >> 1] = (u16)(src[x] | (src[x + 1] << 8));
-        row[(TW - 1) >> 1] = (u16)(src[TW - 1] | (C_PANELLINE << 8));
-        fill32(&row[(TW + 1) >> 1], C_PANEL * 0x01010101u, (SW - TW - 1) / 4);
+        copy32(&page[y * (SW / 2)], &minit8[sy * TW], TW / 4);
+        fill32(&page[y * (SW / 2) + TW / 2], C_PANEL * 0x01010101u, (SW - TW) / 4);
     }
+    rect(TW, 0, 1, SH, C_PANELLINE);
     clipX0 = 0; clipX1 = TW; clipY0 = 0; clipY1 = SH;
     int ready = canThrow() || (screen == S_MINI_PAUSE && live < 0 && nextColor() >= 0 && turnPause <= 0);
     if (ready && (charging || chargeT > 0)) drawAimGuide();

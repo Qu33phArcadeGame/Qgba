@@ -25,7 +25,7 @@ extern const uint16_t slot_pal[192];
 #define ARC_W 44
 #define ARC_H 56
 extern const uint8_t arc8[9][ARC_W * ARC_H];   // the arcade cabinets (menus' palette), in the DS's game order
-#define MINIT_W 119
+#define MINIT_W 120
 #define MINIT_H 160
 #define MINIT_Y0 40
 #define MINIT_S 0.465f
@@ -47,6 +47,14 @@ extern const uint16_t mm_chair_pal[16];
 #define BB_H 160
 extern const uint8_t bb_field[3][BB_W * BB_H];   // Qu33ph-Ball's machines, palette 64-255
 extern const uint16_t bb_pal[3][192];
+extern const uint8_t fd8[240 * 160];          // Fidget's field (on its side), palette 64-255
+extern const uint16_t fd_pal[192];
+extern const uint8_t fd_spin0[2048];
+extern const uint16_t fd_spin0_pal[16];
+extern const uint8_t fd_spin1[2048];
+extern const uint16_t fd_spin1_pal[16];
+extern const uint8_t fd_ball[512];
+extern const uint16_t fd_ball_pal[16];
 extern const uint8_t mm_shadow[256];          // 32x16, colour 1
 // PlinQu33ph markers: red, green 32x32; blue 64x32 (4bpp tiles)
 extern const uint8_t pm_red[512];

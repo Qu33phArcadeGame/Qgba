@@ -49,18 +49,17 @@ void scenePalette(int which) {
     static int cur = -1;
     if (cur == which) return;
     cur = which;
-    memcpy(&bgPal[64], which >= PAL_BALL ? bb_pal[which - PAL_BALL] : which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : logo_pal, 192 * 2);
+    memcpy(&bgPal[64], which >= PAL_BALL ? bb_pal[which - PAL_BALL] : which == PAL_FIELD ? field_pal : which == PAL_SLOT ? slot_pal : which == PAL_MINI ? minit_pal : which == PAL_FIDGET ? fd_pal : logo_pal, 192 * 2);
 }
 
 // ── pixels ────────────────────────────────────────────────────────────────
 int clipX0 = 0, clipX1 = SW, clipY0 = 0, clipY1 = SH;
 void clipAll(void) { clipX0 = 0; clipX1 = SW; clipY0 = 0; clipY1 = SH; }
-static inline void put(int x, int y, int c) {
-    u16 *p = &page[(y * SW + x) >> 1];
-    *p = (x & 1) ? (u16)((*p & 0x00FF) | (c << 8)) : (u16)((*p & 0xFF00) | c);
-}
+// (a macro, not a function: the fast-RAM drawing code below must not call out to the cartridge)
+#define put(x, y, c) do { int x_ = (x); u16 *p_ = &page[((y) * SW + x_) >> 1]; int c_ = (c); \
+    *p_ = (x_ & 1) ? (u16)((*p_ & 0x00FF) | (c_ << 8)) : (u16)((*p_ & 0xFF00) | c_); } while (0)
 void pset(int x, int y, int c) { if (x >= clipX0 && x < clipX1 && y >= clipY0 && y < clipY1) put(x, y, c); }
-static void hfill(int y, int x0, int x1, int c) {          // [x0, x1), already clipped
+IWRAM_CODE static void hfill(int y, int x0, int x1, int c) {          // [x0, x1), already clipped (fast RAM)
     if (x0 >= x1) return;
     if (x0 & 1) { put(x0, y, c); x0++; }
     if (x0 >= x1) return;
@@ -103,7 +102,8 @@ static void markerShapeCap(int x, int y, int w, int h, int cap, int edge) {
 // ── text (DejaVu Sans Bold glyphs, as the DS), dark outline for reading on photos ──
 static int squeeze;                          // pixels taken off each letter's spacing (long labels)
 int textW(const char *t, int sc) { int w = 0; for (; *t; t++) { int ch = *t; if (ch < 32 || ch > 126) ch = '?'; w += (font_w[ch - 32] - squeeze) * sc; } return w; }
-static void glyphs(int x, int y, const char *t, int col, int sc) {
+IWRAM_CODE static void glyphs(int x, int y, const char *t, int col, int sc) {   // (fast RAM: text is drawn a lot)
+    int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1, sq = squeeze;
     for (; *t; t++) {
         int ch = *t; if (ch < 32 || ch > 126) ch = '?';
         const u16 *rows = &font_rows[(ch - 32) * FONT_H];
@@ -113,14 +113,15 @@ static void glyphs(int x, int y, const char *t, int col, int sc) {
             if (!m) continue;
             for (int b2 = 0; b2 < sc; b2++) {
                 int py = y + j * sc + b2;
-                if (py < clipY0 || py >= clipY1) continue;
-                for (u32 mm = m; mm; mm &= mm - 1) {
-                    int i = __builtin_ctz(mm) - 1, c = (r2 >> (i + 1)) & 1 ? col : C_BLACK;
-                    for (int a2 = 0; a2 < sc; a2++) { int px = x + i * sc + a2; if (px >= clipX0 && px < clipX1) put(px, py, c); }
+                if (py < cy0 || py >= cy1) continue;
+                for (int i = -1; m >> (i + 1); i++) {
+                    if (!((m >> (i + 1)) & 1)) continue;
+                    int c = (r2 >> (i + 1)) & 1 ? col : C_BLACK;
+                    for (int a2 = 0; a2 < sc; a2++) { int px = x + i * sc + a2; if (px >= cx0 && px < cx1) put(px, py, c); }
                 }
             }
         }
-        x += (font_w[ch - 32] - squeeze) * sc;
+        x += (font_w[ch - 32] - sq) * sc;
     }
 }
 void text(int x, int y, const char *t, int col, int sc) { glyphs(x, y, t, col, sc); }
@@ -135,12 +136,14 @@ void textCW(int x0, int w, int y, const char *t, int col, int sc) {
 }
 void textC(int y, const char *t, int col, int sc) { textCW(0, SW, y, t, col, sc); }
 int textSW(const char *t) { int w = 0; for (; *t; t++) { int ch = *t; if (ch < 32 || ch > 126) ch = '?'; w += fonts_w[ch - 32]; } return w; }
-void textS(int x, int y, const char *t, int col) {
+IWRAM_CODE void textS(int x, int y, const char *t, int col) {   // (fast RAM)
+    int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1;
     for (; *t; t++) {
         int ch = *t; if (ch < 32 || ch > 126) ch = '?';
         const u16 *rows = &fonts_rows[(ch - 32) * FONTS_H];
-        for (int j = 0; j < FONTS_H; j++) { int py = y + j; if (py < clipY0 || py >= clipY1) continue;
-            for (u32 m = rows[j]; m; m &= m - 1) { int px = x + __builtin_ctz(m); if (px >= clipX0 && px < clipX1) put(px, py, col); } }
+        for (int j = 0; j < FONTS_H; j++) { int py = y + j; if (py < cy0 || py >= cy1) continue;
+            u32 m = rows[j];
+            for (int i = 0; m >> i; i++) if ((m >> i) & 1) { int px = x + i; if (px >= cx0 && px < cx1) put(px, py, col); } }
         x += fonts_w[ch - 32];
     }
 }
@@ -149,10 +152,29 @@ void scoreStr(char *o, int doubled) {
     else if (doubled & 1) sprintf(o, "%d.5", doubled / 2);
     else sprintf(o, "%d", doubled / 2);
 }
-void drawImg(const u8 *img, int w, int h, int x, int y) {   // a picture, colour 0 see-through
-    for (int j = 0; j < h; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
+// a picture, colour 0 see-through: two pixels at a time where both show (fast RAM)
+IWRAM_CODE void drawImg(const u8 *img, int w, int h, int x, int y) {
+    int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1;
+    int i0 = x < cx0 ? cx0 - x : 0, i1 = x + w > cx1 ? cx1 - x : w;
+    if (i0 >= i1) return;
+    for (int j = 0; j < h; j++) { int yy = y + j; if (yy < cy0 || yy >= cy1) continue;
         const u8 *s = &img[j * w];
-        for (int i = 0; i < w; i++) { int xx = x + i; if (s[i] && xx >= clipX0 && xx < clipX1) put(xx, yy, s[i]); } }
+        int i = i0;
+        if ((x + i) & 1) { if (s[i]) put(x + i, yy, s[i]); i++; }
+        u16 *d = &page[(yy * SW + x + i) >> 1];
+        for (; i + 1 < i1; i += 2, d++) {
+            int a = s[i], b = s[i + 1];
+            if (a && b) *d = (u16)(a | (b << 8));
+            else if (a) *d = (u16)((*d & 0xFF00) | a);
+            else if (b) *d = (u16)((*d & 0x00FF) | (b << 8));
+        }
+        if (i < i1 && s[i]) put(x + i, yy, s[i]);
+    }
+}
+// darkens a box by painting every other pixel (a checkerboard) in colour c (fast RAM)
+IWRAM_CODE void stipple(int x, int y, int w, int h, int c) {
+    for (int j = 0; j < h; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
+        for (int i = (j + x) & 1; i < w; i += 2) { int xx = x + i; if (xx >= clipX0 && xx < clipX1) put(xx, yy, c); } }
 }
 void drawLogo(int x, int y) { drawImg(logo8, LOGO_W, LOGO_H, x, y); }
 void coinCount(int x, int y, int slotPal) {
@@ -232,29 +254,42 @@ static void blitRot8(const u8 *spr, int w, int h, int cx, int cy, float ang) {
 // The website's power marker: a black marker with a thick white outline and a narrower cap
 // block on the front end, pointing where the throw goes. It grows with power, and the body
 // fills from the back with the power's colour (white through gold to red).
-static int inRR(int i, int j, int x, int y, int w, int h, int r) {   // inside a rounded rectangle?
-    if (i < x || i >= x + w || j < y || j >= y + h) return 0;
-    int dx = i < x + r ? x + r - i : i >= x + w - r ? i - (x + w - r - 1) : 0;
-    int dy = j < y + r ? y + r - j : j >= y + h - r ? j - (y + h - r - 1) : 0;
-    return dx * dx + dy * dy <= r * r;
+// a rounded rectangle's row j: the columns [*a, *b) it covers (or a >= b if none)
+static void rrSpan(int j, int x, int y, int w, int h, int r, int *a, int *b) {
+    *a = 0; *b = 0;
+    if (j < y || j >= y + h) return;
+    int dy = j < y + r ? y + r - j : j >= y + h - r ? j - (y + h - r - 1) : 0, in = 0;
+    while (in < r && (r - in) * (r - in) + dy * dy > r * r) in++;
+    if (!dy) in = 0;
+    *a = x + in; *b = x + w - in;
 }
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power) {
     static u8 spr[180 * 14];
     int L = (int)len; if (L < 22) L = 22; if (L > 180) L = 180;
-    const int H = 14, ol = 2, capL = 10, capW = 11, r = 3;
+    const int H = 14, ol = 2, capL = 10, capW = 11, r = 3, cy = (H - capW) / 2;
     int bodyL = L - capL + ol, fillL = power > 0 ? (int)((bodyL - 2 * ol) * power + 1) : 0;
     int pr = (int)(power * 31);
     bgPal[C_POWER] = RGB15(31, 31 - pr * 2 / 3, pr < 16 ? 31 - pr * 2 : 0);
-    for (int j = 0; j < H; j++) for (int i = 0; i < L; i++) {
-        int c = 0;
-        if (inRR(i, j, L - capL, (H - capW) / 2, capL, capW, 1))                       // the cap, over the body's end
-            c = inRR(i, j, L - capL + ol, (H - capW) / 2 + ol, capL - 2 * ol, capW - 2 * ol, 0) ? C_PWDARK : C_WHITE;
-        else if (inRR(i, j, 0, 0, bodyL, H, r))                                          // the body
-            c = inRR(i, j, ol, ol, bodyL - 2 * ol, H - 2 * ol, r - 1) ? (i - ol < fillL ? C_POWER : C_PWDARK) : C_WHITE;
-        spr[j * L + i] = (u8)c;
+    for (int j = 0; j < H; j++) {
+        u8 *row = &spr[j * L];
+        int a, b, ia, ib, ca, cb, cia, cib;
+        memset(row, 0, L);
+        rrSpan(j, 0, 0, bodyL, H, r, &a, &b);                              // the body: outline, then inside
+        if (a < b) {
+            memset(row + a, C_WHITE, b - a);
+            rrSpan(j, ol, ol, bodyL - 2 * ol, H - 2 * ol, r - 1, &ia, &ib);
+            if (ia < ib) { int f = ol + fillL; if (f > ib) f = ib; if (f < ia) f = ia;
+                memset(row + ia, C_POWER, f - ia); memset(row + f, C_PWDARK, ib - f); }
+        }
+        rrSpan(j, L - capL, cy, capL, capW, 1, &ca, &cb);                  // the cap, over the body's end
+        if (ca < cb) {
+            memset(row + ca, C_WHITE, cb - ca);
+            rrSpan(j, L - capL + ol, cy + ol, capL - 2 * ol, capW - 2 * ol, 0, &cia, &cib);
+            if (cia < cib) memset(row + cia, C_PWDARK, cib - cia);
+        }
     }
-    float cx = x0 + ux * L / 2, cy = y0 + uy * L / 2;
-    blitRot8(spr, L, H, (int)cx, (int)cy, fatan2r(uy, ux));
+    float cx = x0 + ux * L / 2, cy2 = y0 + uy * L / 2;
+    blitRot8(spr, L, H, (int)cx, (int)cy2, fatan2r(uy, ux));
 }
 
 // ── nation flags (simplified, drawn from shapes) ──────────────────────────

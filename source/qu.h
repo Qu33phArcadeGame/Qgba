@@ -69,7 +69,8 @@ IWRAM_FN void sramWrite(int off, const void *src, int n);
 
 // ── screens ───────────────────────────────────────────────────────────────
 enum { S_TITLE, S_PLAY, S_PAUSE, S_HANDOFF, S_RESULTS, S_HIGHS, S_SETTINGS, S_OLY_SELECT, S_OLY_BRACKET, S_NAME, S_SLOT, S_PLINKO,
-       S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER, S_BALL_MENU, S_BALL, S_BALL_PAUSE, S_BALL_OVER };
+       S_ARCADE, S_MINI_MENU, S_MINI, S_MINI_PAUSE, S_MINI_OVER, S_BALL_MENU, S_BALL, S_BALL_PAUSE, S_BALL_OVER,
+       S_FIDGET_MENU, S_FIDGET, S_FIDGET_PAUSE, S_FIDGET_OVER };
 extern int screen;
 enum { M_SINGLE = 1, M_TWO = 2, M_OLYMPICS = 3 };
 extern int mode;
@@ -117,15 +118,16 @@ void text(int x, int y, const char *t, int col, int sc);
 void textC(int y, const char *t, int col, int sc);                 // centred on the screen
 void textCW(int x0, int w, int y, const char *t, int col, int sc); // centred in [x0, x0 + w)
 int  textSW(const char *t);
-void textS(int x, int y, const char *t, int col);                  // small font, no outline
+IWRAM_FN void textS(int x, int y, const char *t, int col);         // small font, no outline
 void scoreStr(char *o, int doubled);
 void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
 void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
-enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_BALL /* +machine */ };
+enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BALL /* +machine: keep last */ };
 void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
-void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
+IWRAM_FN void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
+IWRAM_FN void stipple(int x, int y, int w, int h, int c);            // a checkerboard of colour c (dims what's under it)
 void coinCount(int x, int y, int slotPal);              // the coin and your balance
 float fsqrt(float v); float fatan2r(float y, float x); float fabsf_(float v); float fsin(float a); float fcos(float a); float frand(void);
 
@@ -137,9 +139,9 @@ int  btnInput(Btn *b, int n, int *sel, int cols);   // returns pressed index or 
 // ── sound (sound in game.c) ───────────────────────────────────────────────
 void sfxThrow(int orient); void sfxPeef(int orient); void sfxPlop(void);
 void musicStart(void); void musicStop(void); void musicToggle(void);
-enum { MUS_MAIN, MUS_MINI, MUS_BALL };
+enum { MUS_MAIN, MUS_MINI, MUS_BALL, MUS_FIDGET };
 void musicSet(int track);          // switch tracks (restarts only if it changes)
-enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL };
+enum { OBJ_MAIN, OBJ_MINI, OBJ_BALL, OBJ_FIDGET };
 void objSet(int set);              // the sprite pictures this screen needs (loaded when it changes)
 
 // ── the match (game.c) ────────────────────────────────────────────────────
@@ -179,6 +181,10 @@ void drawBallMenu(void); void inputBallMenu(void);
 void drawBall(void); void inputBall(void); void updateBall(void);
 void drawBallOver(void); void inputBallOver(void);
 void ballObjLoad(void); int ballMachine(void);
+void drawFidgetMenu(void); void inputFidgetMenu(void);
+void drawFidget(void); void inputFidget(void); void updateFidget(void);
+void drawFidgetOver(void); void inputFidgetOver(void);
+void fidgetObjLoad(void);
 
 // ── toast: short message (new high score) ─────────────────────────────────
 void toast(const char *a, const char *b);
