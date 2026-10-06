@@ -82,3 +82,57 @@ extern const int8_t fs_oob2[];
 #define FS_OOB2_LEN 11264
 extern const int8_t fs_music[];
 #define FS_MUSIC_LEN 450000
+extern const int8_t bw_t0[];
+#define BW_T0_LEN 37205
+extern const int8_t bw_t1[];
+#define BW_T1_LEN 19797
+extern const int8_t bw_t2[];
+#define BW_T2_LEN 32085
+extern const int8_t bw_t3[];
+#define BW_T3_LEN 19114
+extern const int8_t bw_t4[];
+#define BW_T4_LEN 16384
+extern const int8_t bw_t5[];
+#define BW_T5_LEN 19456
+extern const int8_t bw_t6[];
+#define BW_T6_LEN 24917
+extern const int8_t bw_t7[];
+#define BW_T7_LEN 29354
+extern const int8_t bw_t8[];
+#define BW_T8_LEN 26965
+extern const int8_t bw_t9[];
+#define BW_T9_LEN 13653
+extern const int8_t bw_t10[];
+#define BW_T10_LEN 31744
+extern const int8_t bw_t11[];
+#define BW_T11_LEN 33792
+extern const int8_t bw_t12[];
+#define BW_T12_LEN 30720
+extern const int8_t bw_t13[];
+#define BW_T13_LEN 27648
+extern const int8_t bw_t14[];
+#define BW_T14_LEN 34133
+extern const int8_t bw_t15[];
+#define BW_T15_LEN 21504
+extern const int8_t bw_t16[];
+#define BW_T16_LEN 21504
+extern const int8_t bw_t17[];
+#define BW_T17_LEN 19456
+extern const int8_t bw_p0[];
+#define BW_P0_LEN 22528
+extern const int8_t bw_p1[];
+#define BW_P1_LEN 50517
+extern const int8_t bw_p2[];
+#define BW_P2_LEN 26282
+extern const int8_t bw_p3[];
+#define BW_P3_LEN 28330
+extern const int8_t bw_p4[];
+#define BW_P4_LEN 40960
+extern const int8_t bw_p5[];
+#define BW_P5_LEN 22528
+extern const int8_t bw_peef[];
+#define BW_PEEF_LEN 29013
+extern const int8_t bw_wash[];
+#define BW_WASH_LEN 37546
+extern const int8_t bw_music[];
+#define BW_MUSIC_LEN 450000

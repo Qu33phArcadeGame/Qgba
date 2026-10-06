@@ -55,6 +55,19 @@ extern const uint8_t fd_spin1[2048];
 extern const uint16_t fd_spin1_pal[16];
 extern const uint8_t fd_ball[512];
 extern const uint16_t fd_ball_pal[16];
+#define BWL_W 160
+#define BWL_Y0 86
+#define BWL_S 0.620155f
+extern const uint8_t bwl8[160 * 160];   // Bowling's lane, palette 64-255
+extern const uint16_t bwl_pal[192];
+extern const uint8_t bw_pin0[1024];
+extern const uint16_t bw_pin0_pal[16];
+extern const uint8_t bw_pin1[1024];
+extern const uint16_t bw_pin1_pal[16];
+extern const uint8_t bw_pin2[1024];
+extern const uint16_t bw_pin2_pal[16];
+extern const uint8_t bw_mega[256];
+extern const uint16_t bw_mega_pal[16];
 extern const uint8_t mm_shadow[256];          // 32x16, colour 1
 // PlinQu33ph markers: red, green 32x32; blue 64x32 (4bpp tiles)
 extern const uint8_t pm_red[512];
