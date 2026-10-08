@@ -14,9 +14,11 @@ typedef int8_t s8; typedef int16_t s16; typedef int32_t s32;
 #ifdef GBA_SIM
 #define IWRAM_CODE
 #define IWRAM_FN
+#define IWRAM_LOCAL
 #define EWRAM_BSS
 #else
 #define IWRAM_CODE __attribute__((section(".iwram"), long_call, target("arm"), noinline))
+#define IWRAM_LOCAL __attribute__((section(".iwram"), target("arm"), noinline))   // fast RAM, called only from fast RAM
 #define IWRAM_FN   __attribute__((long_call))
 #define EWRAM_BSS  __attribute__((section(".sbss")))
 #endif
@@ -52,7 +54,18 @@ typedef struct { u16 a0, a1, a2, a3; } Obj;
 extern Obj oam[128];               // a copy of the sprite table, sent to the hardware in the blank
 extern volatile u32 vbCount;       // screen refreshes so far (60 a second)
 void platInit(void);
-void platFlip(void);               // wait for the blank, show the finished page, send sprites + palettes
+void platShow(int swap);           // the same, but swap 0 keeps the page on screen (nothing new was drawn)
+void platFlip(void);
+void drawBegin(void);              // start listing this frame's drawing (see draw.c)
+void drawDirect(void);             // about to write straight into the page: draw what's listed, stop listing
+void drawEnd(void);
+IWRAM_FN void drawImg_(const u8 *img, int w, int h, int x, int y);    // drawImg at once, never listed (direct screens only)
+IWRAM_FN void hspan(int y, int x0, int x1, int c);                     // a clipped row, drawn at once (direct screens only)
+IWRAM_FN void hstripe(int y, int x0, int x1, int w, int c0, int c1);  // a row of diagonal stripes (direct screens only)
+u32 sigMix(u32 h, int v);          // fold a number into a fingerprint
+int panelNeeds(u32 sig);           // 1 = draw the side panel this frame (its fingerprint changed on this page)
+int panelLine(int id, u32 sig, int x, int y, int w, int h, int bg);   // 1 = redraw this panel line (its box is cleared)
+int toastOn(void);                // draw the list if the screen changed, then show it               // wait for the blank, show the finished page, send sprites + palettes
 void platObjTiles(int tile, const void *src, int bytes);   // sprite pictures (tile = 32-byte units)
 u16  platKeys(void);
 void platGameView(int w);          // sprites only over the left w columns (0: anywhere)
@@ -125,7 +138,7 @@ void text(int x, int y, const char *t, int col, int sc);
 void textC(int y, const char *t, int col, int sc);                 // centred on the screen
 void textCW(int x0, int w, int y, const char *t, int col, int sc); // centred in [x0, x0 + w)
 int  textSW(const char *t);
-IWRAM_FN void textS(int x, int y, const char *t, int col);         // small font, no outline
+void textS(int x, int y, const char *t, int col);         // small font, no outline
 void scoreStr(char *o, int doubled);
 void drawFlag(int x, int y, int w, int h, int nation);
 void drawLogo(int x, int y);
@@ -133,8 +146,8 @@ void powerMarker(int x0, int y0, float ux, float uy, float len, float power);
 void uiPalette(void);             // the fixed colours 0-63
 enum { PAL_MENU, PAL_FIELD, PAL_SLOT, PAL_MINI, PAL_FIDGET, PAL_BOWL, PAL_STACK, PAL_FLIP, PAL_DOZER, PAL_PIN, PAL_JUMP, PAL_BALL /* +machine: keep last */ };
 void scenePalette(int which);      // 64-255: the menus (logo, coin), the field, or the slot machine
-IWRAM_FN void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
-IWRAM_FN void stipple(int x, int y, int w, int h, int c);            // a checkerboard of colour c (dims what's under it)
+void drawImg(const u8 *img, int w, int h, int x, int y);   // a picture, colour 0 see-through
+void stipple(int x, int y, int w, int h, int c);            // a checkerboard of colour c (dims what's under it)
 void coinCount(int x, int y, int slotPal);              // the coin and your balance
 float fsqrt(float v); float fatan2r(float y, float x); float fabsf_(float v); float fsin(float a); float fcos(float a); float frand(void);
 

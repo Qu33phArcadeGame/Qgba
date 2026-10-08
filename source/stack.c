@@ -353,6 +353,7 @@ void drawStack(void) {
     // the window backdrop, scrolling slowly (the website's parallax), then the panel
     int off = ((int)(camY * 0.16f * SS) % STW_H + STW_H) % STW_H;
     for (int y = 0; y < SH; y++) {
+        drawDirect();
         int sy = ((y - off) % STW_H + STW_H) % STW_H;
         copy32(&page[y * (SW / 2)], &stw8[sy * STW_W], STW_W / 4);
         fill32(&page[y * (SW / 2) + FW / 2], C_PANEL * 0x01010101u, (SW - FW) / 4);

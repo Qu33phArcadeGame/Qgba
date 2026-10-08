@@ -265,8 +265,18 @@ static void drawHandoff(void) {
 // ── main loop ─────────────────────────────────────────────────────────────
 // Frames really shown are counted by the screen's own refresh (60 a second). If a busy frame
 // takes longer than 1/60 s, the match catches up by running extra steps, so it keeps full speed.
+#ifdef PROF                                   // (timing build: cycles per part of the frame, read by the test runner)
+volatile u32 profT[8];
+static inline u32 tnow(void) { return *(volatile u16 *)0x04000108 | (*(volatile u16 *)0x0400010C << 16); }
+#define PT(i, t) u32 t = tnow()
+#else
+#define PT(i, t)
+#endif
 int main(void) {
     platInit();
+#ifdef PROF
+    *(volatile u16 *)0x0400010E = 0x84; *(volatile u16 *)0x0400010A = 0x80;
+#endif
     uiPalette();
     saveInit();
 #ifdef GBA_SIM
@@ -278,6 +288,7 @@ int main(void) {
     u32 vbLast = vbCount; u16 prev = 0;
     while (1) {
         frameCount++;
+        PT(0, t0);
         u32 vbNow = vbCount; int steps = (int)(vbNow - vbLast); vbLast = vbNow;
         if (steps < 1) steps = 1;
         if (steps > 3) steps = 3;                                   // (never more than 3 catch-up steps)
@@ -335,6 +346,7 @@ int main(void) {
             case S_JUMP: case S_JUMP_PAUSE: inputJump(); for (int s = 0; s < steps && screen == S_JUMP; s++) updateJump(); break;
             case S_JUMP_OVER: inputJumpOver(); break;
         }
+        PT(0, t1);
         int inMatch = screen == S_PLAY || screen == S_PAUSE;
         int inMini = screen >= S_MINI_MENU && screen <= S_MINI_OVER, onTable = screen >= S_MINI && screen <= S_MINI_OVER;
         int inBall = screen >= S_BALL_MENU && screen <= S_BALL_OVER, onMachine = screen >= S_BALL && screen <= S_BALL_OVER;
@@ -352,6 +364,8 @@ int main(void) {
         platGameView(inMatch ? VIEW_W : onTower ? 160 : 0);
         if (!inMatch) hideSprites();
         clipAll();
+        PT(2, t2);
+        drawBegin();
         switch (screen) {
             case S_TITLE: drawTitle(); break;
             case S_PLAY: matchDraw(); break;
@@ -401,8 +415,15 @@ int main(void) {
             case S_JUMP: case S_JUMP_PAUSE: drawJump(); break;
             case S_JUMP_OVER: drawJumpOver(); break;
         }
+        PT(1, t3);
         drawToast();
-        platFlip();
+#ifdef PROF
+        profT[3] = tnow() - t0;
+#endif
+        drawEnd();
+#ifdef PROF
+        profT[0] = t1 - t0; profT[1] = t3 - t2; profT[2] = t2 - t1;
+#endif
     }
     return 0;
 }

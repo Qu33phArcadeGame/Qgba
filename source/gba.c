@@ -59,8 +59,8 @@ typedef volatile u8 vu8;
 #define DMA_SRC_FIXED 0x0100
 
 u16 *page;
-u16 bgPal[256], objPal[256];
-Obj oam[128];
+u16 bgPal[256] EWRAM_BSS, objPal[256] EWRAM_BSS;
+Obj oam[128] EWRAM_BSS;
 volatile u32 vbCount;
 static int shown;                     // the page on screen (0 or 1)
 static int gameView;
@@ -163,9 +163,10 @@ static void vblankWait(void) {
     __asm__ volatile("swi 0x050000" ::: "r0", "r1", "r2", "r3", "memory");
 #endif
 }
-void platFlip(void) {
+void platFlip(void) { platShow(1); }
+void platShow(int swap) {
     vblankWait();
-    shown ^= 1;
+    shown ^= swap;
     REG_DISPCNT = 0x0004 | 0x0400 | 0x1000 | 0x0040 | (shown ? 0x0010 : 0) | (gameView ? 0x2000 : 0);
     copy32(MEM_OAM, oam, 256);
     copy32(MEM_PAL, bgPal, 128);

@@ -205,6 +205,7 @@ static void drawFlipper(float fx, float fy, float ang, float len, int mirror) {
 }
 void drawPin(void) {
     char s[32];
+    drawDirect();
     for (int y = 0; y < SH; y++) {
         copy32(&page[y * (SW / 2)], &pb8[y * PBT_W], PBT_W / 4);
         fill32(&page[y * (SW / 2) + PBT_W / 2], C_PANEL * 0x01010101u, (SW - PBT_W) / 4);

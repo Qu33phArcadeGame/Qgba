@@ -299,11 +299,17 @@ static void drawPanel(void) {
     char s[24], a[12];
     clipX0 = PANEL_X; clipX1 = SW; clipY0 = 0; clipY1 = SH;
     int left = (totalFrames - roundFrames + 59) / 60; if (left < 0) left = 0;
+    // the words and numbers: redrawn only when one of them changed (they're the same most frames)
+    int bar = 30 * (totalFrames - roundFrames) / (totalFrames ? totalFrames : 1);
+    u32 sig = sigMix(sigMix(sigMix(sigMix(sigMix(sigMix(left, suddenDeath), bar), mode), score2[0]), score2[1]), player);
+    sig = sigMix(sigMix(sigMix(sigMix(sig, p2Round), olyNation), current), orient);
+    if (panelNeeds(sig)) {
+    for (int y = 0; y < SH; y++) copy32(&page[y * (SW / 2) + VIEW_W / 2], &panelBg[y * 64], 9);
     textS(PANEL_X + 4, 3, suddenDeath ? "SUDDEN" : "TIME", suddenDeath ? RED : GREY);
     sprintf(s, "%d", left); text(PANEL_X + 4, 13, s, suddenDeath ? RED : WHITE, 1);
     int bh = 4;  // the time bar under it
     rect(PANEL_X + 4, 29, 30, bh, C_PANELLINE);
-    rect(PANEL_X + 4, 29, 30 * (totalFrames - roundFrames) / (totalFrames ? totalFrames : 1), bh, suddenDeath ? RED : LIME);
+    rect(PANEL_X + 4, 29, bar, bh, suddenDeath ? RED : LIME);
     clipX1 = MAP_X - 2;                               // panel text never runs into the map
     if (mode != M_TWO) {
         textS(PANEL_X + 4, 38, "SCORE", GREY);
@@ -322,6 +328,7 @@ static void drawPanel(void) {
     for (int i = 0; i < 3; i++) if (i >= current) rect(PANEL_X + 6 + i * 10, 100, 5, 16, MCOL[i]); else rect(PANEL_X + 6 + i * 10, 112, 5, 4, C_PANELLINE);
     textS(PANEL_X + 4, 126, "L / R", GREY);
     textS(PANEL_X + 4, 138, ORIENT_SHORT[orient], WHITE);
+    }
     // the map: where the view is, the markers, the chair in sudden death, and the aim
     clipX0 = MAP_X; clipX1 = MAP_X + MM_W;
     int vy0 = camOff * MM_H / FIELD_H, vy1 = (camOff + SH) * MM_H / FIELD_H;
@@ -342,9 +349,10 @@ static void drawPanel(void) {
 void matchDraw(void) {
     camOff = (int)camY;
     // the field: one row of the photo per line, then the panel's fixed picture beside it
+    drawDirect();
     for (int y = 0; y < SH; y++) {
         copy32(&page[y * (SW / 2)], &field8[(camOff + y) * FIELD_W], FIELD_W / 4);
-        copy32(&page[y * (SW / 2) + VIEW_W / 2], &panelBg[y * 64], 16);
+        copy32(&page[y * (SW / 2) + VIEW_W / 2 + 18], &panelBg[y * 64 + 36], 7);   // (the map's strip: it changes every frame)
     }
     clipX0 = 0; clipX1 = VIEW_W; clipY0 = 0; clipY1 = SH;
     // the power marker grows out of the launch spot

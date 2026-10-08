@@ -261,6 +261,7 @@ static void aff(int tile, int pal, int shape, int size, int w, int h, int cx, in
 static void drawBg(void) {
     int ox = (int)(camX * 0.10f * FS);                         // the website's 0.10 parallax
     ox = (ox % FLW + FLW) % FLW;
+    drawDirect();
     const u8 *img = fl8[ox & 3]; int sx0 = ox & ~3;            // (the copy shifted by ox's last 2 bits)
     for (int y = 0; y < SH; y++) {
         const u8 *row = &img[y * FLW]; u16 *d = &page[y * (SW / 2)];

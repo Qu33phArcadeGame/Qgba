@@ -1,7 +1,7 @@
 // save.c — progress kept in the cartridge's battery-backed save memory (SRAM), high scores, records
 #include "qu.h"
 
-SaveData sv;
+SaveData sv EWRAM_BSS;
 int saveOK;
 #define SAVE_MAGIC 0x47335551   // "QU3G"
 #include <stddef.h>
@@ -19,7 +19,7 @@ static void defaults(void) {
 // a simple checksum after the data, so a blank or scrambled save memory starts fresh
 static u32 sumN(const void *s, unsigned n) { const u8 *p = s; u32 h = 2166136261u; for (unsigned i = 0; i < n; i++) h = (h ^ p[i]) * 16777619u; return h; }
 static u32 sum(const SaveData *s) { return sumN(s, sizeof *s); }
-static SaveData lastSaved; static int haveSaved;
+static SaveData lastSaved EWRAM_BSS; static int haveSaved;
 void saveInit(void) {
     (void)*(volatile const char *)saveTypeTag;       // (keeps the tag in the cartridge)
     defaults();

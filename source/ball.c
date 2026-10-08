@@ -332,6 +332,7 @@ static void markerAt(int col, float fx, float fy, float scale, float rot, int se
 static void textSO(int x, int y, const char *t, int c) { textS(x + 1, y + 1, t, C_BLACK); textS(x, y, t, c); }   // small, with a shadow
 void drawBall(void) {
     const Machine *f = M(); char s[24];
+    drawDirect();
     for (int y = 0; y < SH; y++) {                        // the machine, a divider, the panel
         copy32(&page[y * (SW / 2)], &bb_field[mach][y * BB_W], BB_W / 4);
         fill32(&page[y * (SW / 2) + BB_W / 2], C_PANEL * 0x01010101u, (SW - BB_W) / 4);

@@ -44,7 +44,7 @@ static int flight, bouncing, flappy, flappyFreeze, flapEndless, stairDir, stairL
 static float camX, camY, zoom, zoomT, genX, genY, segLeft, lastPlatX, noMarkerUntilX, startX, startY, bestX, bestUp, lastGroundY, progress, flappyFloorY, flappyCeilY, flappyEndX, flapLastX, flapBandY;
 static int genMode;                                    // 0 up, 1 right, 2 stairs
 static struct { float x, y, w, h; int hit, on; } mega;
-static float deco[44][4];
+static float deco[44][4] EWRAM_BSS;
 enum { ST_PLAY, ST_OVER };
 #define JBEST(m) sv.jumpBest[m]                        // each mode's best
 
@@ -520,7 +520,7 @@ static float GY(float y) { return SH / 2 + (y - camY - H / 2) * zoom * GS; }
 // Jump has no backdrop picture: its 192 scene colours are made here. 64-79 the sky (top to
 // bottom), 80 the drifting dots, 81-92 the three marker colours (light, body, dark, cap),
 // 93-95 the coin (gold, rim, shine), 96-98 the pipes' lips.
-u16 jump_pal[192];
+u16 jump_pal[192] EWRAM_BSS;
 static void jumpPalInit(void) {
     for (int i = 0; i < 16; i++) jump_pal[i] = RGB15(3 + (9 - 3) * i / 15, 4 + (7 - 4) * i / 15, 11 + (20 - 11) * i / 15);
     jump_pal[16] = RGB15(26, 26, 31);
@@ -586,6 +586,7 @@ static void spr(int tile, int pal, int shape, int size, int w, int h, int cx, in
     oam[i].a2 = (u16)(tile | (pal << 12));
 }
 static void sky(void) {
+    drawDirect();
     for (int y = 0; y < SH; y++) fill32(&page[y * (SW / 2)], (JC_SKY + y * 16 / SH) * 0x01010101u, SW / 4);
     for (int d = 0; d < 44; d++) {                          // the website's drifting dots (parallax by depth)
         float z = deco[d][2];
@@ -712,7 +713,7 @@ void inputJumpMenu(void) {
     if (h == 5) goScreen(S_ARCADE);
 }
 // pick your runner: just the pictures, as on the website
-static Btn CB[8];
+static Btn CB[8] EWRAM_BSS;
 static void chLayout(void) {
     for (int k = 0; k < 7; k++) CB[k] = (Btn){ 5 + k * 33, 92, 31, 40, "", 0, 0 };
     CB[7] = (Btn){ 70, 136, 100, 22, "OK", 0, 0 };

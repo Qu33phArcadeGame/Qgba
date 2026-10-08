@@ -144,6 +144,7 @@ static void spr(int tile, int pal, int size, int half, int cx, int cy, float ang
 static int lineCol(int c) { return c ? C_MBLUE : C_MGREEN; }
 void drawFidget(void) {
     char s[24];
+    drawDirect();
     copy32(page, fd8, SW * SH / 4);                         // the field, then its ends in each player's colour
     rect(0, 0, 3, SH, lineCol(c1));                         // your end (the left)
     rect(SW - 3, 0, 3, SH, lineCol(!c1));                   // theirs

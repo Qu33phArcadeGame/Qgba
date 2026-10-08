@@ -58,7 +58,7 @@ void clipAll(void) { clipX0 = 0; clipX1 = SW; clipY0 = 0; clipY1 = SH; }
 // (a macro, not a function: the fast-RAM drawing code below must not call out to the cartridge)
 #define put(x, y, c) do { int x_ = (x); u16 *p_ = &page[((y) * SW + x_) >> 1]; int c_ = (c); \
     *p_ = (x_ & 1) ? (u16)((*p_ & 0x00FF) | (c_ << 8)) : (u16)((*p_ & 0xFF00) | c_); } while (0)
-void pset(int x, int y, int c) { if (x >= clipX0 && x < clipX1 && y >= clipY0 && y < clipY1) put(x, y, c); }
+static void pset_(int x, int y, int c) { if (x >= clipX0 && x < clipX1 && y >= clipY0 && y < clipY1) put(x, y, c); }
 IWRAM_CODE static void hfill(int y, int x0, int x1, int c) {          // [x0, x1), already clipped (fast RAM)
     if (x0 >= x1) return;
     if (x0 & 1) { put(x0, y, c); x0++; }
@@ -67,14 +67,30 @@ IWRAM_CODE static void hfill(int y, int x0, int x1, int c) {          // [x0, x1
     u16 cc = (u16)(c | (c << 8)), *d = &page[(y * SW + x0) >> 1];
     for (int n = (x1 - x0) >> 1; n > 0; n--) *d++ = cc;
 }
-void rect(int x, int y, int w, int h, int c) {
+// one row from x0 to x1 (exclusive), clipped; drawn at once, never listed: only for screens
+// that draw straight into the page (after drawDirect) (fast RAM)
+IWRAM_CODE void hspan(int y, int x0, int x1, int c) {
+    if (y < clipY0 || y >= clipY1) return;
+    if (x0 < clipX0) x0 = clipX0;
+    if (x1 > clipX1) x1 = clipX1;
+    hfill(y, x0, x1, c);
+}
+// a row of diagonal stripes, w wide, alternating c0/c1, shifted by the row (fast RAM)
+IWRAM_CODE void hstripe(int y, int x0, int x1, int w, int c0, int c1) {
+    if (y < clipY0 || y >= clipY1 || w < 1) return;
+    int k = 0, ph = x0 + y; while (ph >= w) { ph -= w; k++; }       // (x0 + y) / w, without a divide
+    int x = x0, e = x0 + (w - ph);
+    while (x < x1) { int x2 = e < x1 ? e : x1, a = x < clipX0 ? clipX0 : x, b = x2 > clipX1 ? clipX1 : x2; if (a < b) hfill(y, a, b, k & 1 ? c1 : c0); x = x2; k++; e += w; }
+}
+static void rect_(int x, int y, int w, int h, int c) {
     int x0 = x < clipX0 ? clipX0 : x, x1 = x + w > clipX1 ? clipX1 : x + w;
     int y0 = y < clipY0 ? clipY0 : y, y1 = y + h > clipY1 ? clipY1 : y + h;
     for (int yy = y0; yy < y1; yy++) hfill(yy, x0, x1, c);
 }
-void fillScreen(int c) { u32 cc = c * 0x01010101u; fill32(page, cc, SW * SH / 4); }
+static void fillScreen_(int c) { u32 cc = c * 0x01010101u; fill32(page, cc, SW * SH / 4); }
 void box(int x, int y, int w, int h, int fill, int edge) { rect(x, y, w, h, edge); rect(x + 2, y + 2, w - 4, h - 4, fill); }
 
+static void shape(int x, int y, int w, int h, int rl, int rr, int grad, int c);
 // ── the website's marker shape (body + cap), used by buttons and the power marker ──
 static int inset(int j, int h, int r) {
     int d = j < r ? r - j : (j >= h - r ? j - (h - 1 - r) : 0);
@@ -83,7 +99,7 @@ static int inset(int j, int h, int r) {
     return i;
 }
 // rounded left (rl) / right (rr) ends; each row's colour from the gradient (grad) or c
-static void shape(int x, int y, int w, int h, int rl, int rr, int grad, int c) {
+static void shape_(int x, int y, int w, int h, int rl, int rr, int grad, int c) {
     for (int j = 0; j < h; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
         int x0 = x + inset(j, h, rl), x1 = x + w - inset(j, h, rr);
         if (x0 < clipX0) x0 = clipX0;
@@ -102,6 +118,24 @@ static void markerShapeCap(int x, int y, int w, int h, int cap, int edge) {
 // ── text (DejaVu Sans Bold glyphs, as the DS), dark outline for reading on photos ──
 static int squeeze;                          // pixels taken off each letter's spacing (long labels)
 int textW(const char *t, int sc) { int w = 0; for (; *t; t++) { int ch = *t; if (ch < 32 || ch > 126) ch = '?'; w += (font_w[ch - 32] - squeeze) * sc; } return w; }
+// One row of a letter into the page two pixels (one 16-bit word) at a time. Bit b of the masks
+// is the pixel at base + b; "all" is every pixel drawn, "body" the ones in colour col (the rest
+// are its dark outline). Clipped to [cx0, cx1).
+static inline __attribute__((always_inline)) void rowPairs(int py, int base, u32 body, u32 all, int col, int cx0, int cx1) {
+    if (base < cx0) { int k = cx0 - base; if (k >= 32) return; all &= ~((1u << k) - 1); }
+    if (cx1 - base < 32) { int k = cx1 - base; if (k <= 0) return; all &= (1u << k) - 1; }
+    if (!all) return;
+    if (base & 1) { base--; all <<= 1; body <<= 1; }
+    u16 *d = &page[(py * SW + base) >> 1];
+    u32 cb = (u32)col, ck = C_BLACK;
+    for (; all; all >>= 2, body >>= 2, d++) {
+        u32 two = all & 3; if (!two) continue;
+        u32 lo = body & 1 ? cb : ck, hi = body & 2 ? cb : ck;
+        if (two == 3) *d = (u16)(lo | (hi << 8));
+        else if (two == 1) *d = (u16)((*d & 0xFF00) | lo);
+        else *d = (u16)((*d & 0x00FF) | (hi << 8));
+    }
+}
 IWRAM_CODE static void glyphs(int x, int y, const char *t, int col, int sc) {   // (fast RAM: text is drawn a lot)
     int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1, sq = squeeze;
     for (; *t; t++) {
@@ -111,6 +145,7 @@ IWRAM_CODE static void glyphs(int x, int y, const char *t, int col, int sc) {   
             u32 r = (j >= 0 && j < FONT_H) ? rows[j] : 0, up = j > 0 ? rows[j - 1] : 0, dn = j < FONT_H - 1 ? rows[j + 1] : 0;
             u32 r2 = r << 1, out = ((r2 << 1) | (r2 >> 1) | (up << 1) | (dn << 1)) & ~r2, m = out | r2;   // bit i+1 = column i
             if (!m) continue;
+            if (sc == 1) { int py = y + j; if (py >= cy0 && py < cy1) rowPairs(py, x - 1, r2, m, col, cx0, cx1); continue; }
             for (int b2 = 0; b2 < sc; b2++) {
                 int py = y + j * sc + b2;
                 if (py < cy0 || py >= cy1) continue;
@@ -124,7 +159,7 @@ IWRAM_CODE static void glyphs(int x, int y, const char *t, int col, int sc) {   
         x += (font_w[ch - 32] - sq) * sc;
     }
 }
-void text(int x, int y, const char *t, int col, int sc) { glyphs(x, y, t, col, sc); }
+
 // centred text that always fits: too wide at double size drops to normal size (kept vertically
 // centred where the big text would have been), then tightens its letters
 void textCW(int x0, int w, int y, const char *t, int col, int sc) {
@@ -136,14 +171,13 @@ void textCW(int x0, int w, int y, const char *t, int col, int sc) {
 }
 void textC(int y, const char *t, int col, int sc) { textCW(0, SW, y, t, col, sc); }
 int textSW(const char *t) { int w = 0; for (; *t; t++) { int ch = *t; if (ch < 32 || ch > 126) ch = '?'; w += fonts_w[ch - 32]; } return w; }
-IWRAM_CODE void textS(int x, int y, const char *t, int col) {   // (fast RAM)
+IWRAM_CODE static void textS_(int x, int y, const char *t, int col) {   // (fast RAM)
     int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1;
     for (; *t; t++) {
         int ch = *t; if (ch < 32 || ch > 126) ch = '?';
         const u16 *rows = &fonts_rows[(ch - 32) * FONTS_H];
         for (int j = 0; j < FONTS_H; j++) { int py = y + j; if (py < cy0 || py >= cy1) continue;
-            u32 m = rows[j];
-            for (int i = 0; m >> i; i++) if ((m >> i) & 1) { int px = x + i; if (px >= cx0 && px < cx1) put(px, py, col); } }
+            u32 m = rows[j]; if (m) rowPairs(py, x, m, m, col, cx0, cx1); }
         x += fonts_w[ch - 32];
     }
 }
@@ -153,7 +187,7 @@ void scoreStr(char *o, int doubled) {
     else sprintf(o, "%d", doubled / 2);
 }
 // a picture, colour 0 see-through: two pixels at a time where both show (fast RAM)
-IWRAM_CODE void drawImg(const u8 *img, int w, int h, int x, int y) {
+IWRAM_CODE void drawImg_(const u8 *img, int w, int h, int x, int y) {
     int cx0 = clipX0, cx1 = clipX1, cy0 = clipY0, cy1 = clipY1;
     int i0 = x < cx0 ? cx0 - x : 0, i1 = x + w > cx1 ? cx1 - x : w;
     if (i0 >= i1) return;
@@ -172,7 +206,7 @@ IWRAM_CODE void drawImg(const u8 *img, int w, int h, int x, int y) {
     }
 }
 // darkens a box by painting every other pixel (a checkerboard) in colour c (fast RAM)
-IWRAM_CODE void stipple(int x, int y, int w, int h, int c) {
+IWRAM_CODE static void stipple_(int x, int y, int w, int h, int c) {
     for (int j = 0; j < h; j++) { int yy = y + j; if (yy < clipY0 || yy >= clipY1) continue;
         for (int i = (j + x) & 1; i < w; i += 2) { int xx = x + i; if (xx >= clipX0 && xx < clipX1) put(xx, yy, c); } }
 }
@@ -263,7 +297,7 @@ static void rrSpan(int j, int x, int y, int w, int h, int r, int *a, int *b) {
     if (!dy) in = 0;
     *a = x + in; *b = x + w - in;
 }
-void powerMarker(int x0, int y0, float ux, float uy, float len, float power) {
+static void powerMarker_(int x0, int y0, float ux, float uy, float len, float power) {
     static u8 spr[180 * 14] EWRAM_BSS;
     int L = (int)len; if (L < 22) L = 22; if (L > 180) L = 180;
     const int H = 14, ol = 2, capL = 10, capW = 11, r = 3, cy = (H - capW) / 2;
@@ -338,6 +372,7 @@ void drawFlag(int x, int y, int w, int h, int n) {
 // ── toasts: "NEW HIGH SCORE!" ─────────────────────────────────────────────
 static char toastA[28], toastB[28]; static int toastT;
 void toast(const char *a, const char *b) { strncpy(toastA, a, 27); toastA[27] = 0; strncpy(toastB, b ? b : "", 27); toastB[27] = 0; toastT = 150; }
+int toastOn(void) { return toastT > 0; }
 void drawToast(void) {
     if (toastT <= 0) return;
     toastT--;
@@ -345,4 +380,109 @@ void drawToast(void) {
     box(20, 112, 200, 42, C_TOAST, GOLD);
     textC(116, toastA, GOLD, 1);
     if (toastB[0]) textC(134, toastB, WHITE, 1);
+}
+
+// ── the frame's drawing list ─────────────────────────────────────────────
+// Menus look the same frame after frame, and drawing them pixel by pixel took up to three
+// frames' time. So while a screen draws, each drawing call is only written down (with the
+// clipping it had), and the list's fingerprint compared with what each of the two pages
+// already shows: the same as the page on screen -> nothing is drawn at all; the same as the
+// hidden page -> just show it; otherwise the list is played into the hidden page. A screen
+// that copies straight into the page (a game's playfield) plays what's listed so far at that
+// moment and draws directly from then on (drawDirect), so the order never changes.
+enum { D_PSET, D_RECT, D_FILL, D_SHAPE, D_TEXT, D_TEXTS, D_IMG, D_STIP, D_POWER };
+typedef struct { u8 op, c, sq, n; s16 cx0, cx1, cy0, cy1; int a[6]; const void *p; } DCmd;
+#define DL_MAX 1400
+static DCmd dl[DL_MAX] EWRAM_BSS;
+static char dpool[8192] EWRAM_BSS;
+static int dN, dPool, listing, backPage;
+static u32 pageSig[2];                       // what each page holds (0 = unknown); [backPage] is being drawn
+static void playList(void) {
+    int s0 = clipX0, s1 = clipX1, s2 = clipY0, s3 = clipY1, sq = squeeze;
+    listing = 0;
+    for (int i = 0; i < dN; i++) {
+        const DCmd *d = &dl[i]; const int *a = d->a;
+        clipX0 = d->cx0; clipX1 = d->cx1; clipY0 = d->cy0; clipY1 = d->cy1; squeeze = d->sq;
+        switch (d->op) {
+            case D_PSET: pset_(a[0], a[1], d->c); break;
+            case D_RECT: rect_(a[0], a[1], a[2], a[3], d->c); break;
+            case D_FILL: fillScreen_(d->c); break;
+            case D_SHAPE: shape_(a[0], a[1], a[2], a[3], a[4], a[5], d->n, d->c); break;
+            case D_TEXT: glyphs(a[0], a[1], d->p, d->c, d->n); break;
+            case D_TEXTS: textS_(a[0], a[1], d->p, d->c); break;
+            case D_IMG: drawImg_(d->p, a[0], a[1], a[2], a[3]); break;
+            case D_STIP: stipple_(a[0], a[1], a[2], a[3], d->c); break;
+            case D_POWER: { float f[4]; memcpy(f, &a[2], 16); powerMarker_(a[0], a[1], f[0], f[1], f[2], f[3]); } break;
+        }
+    }
+    clipX0 = s0; clipX1 = s1; clipY0 = s2; clipY1 = s3; squeeze = sq; dN = 0;
+}
+// write one call down (0: not listing, so draw it now)
+static DCmd *note(int op, int c) {
+    if (!listing) return 0;
+    if (dN == DL_MAX) { drawDirect(); return 0; }              // (too much to list: draw the rest directly)
+    DCmd *d = &dl[dN++]; d->op = (u8)op; d->c = (u8)c; d->sq = (u8)squeeze; d->n = 0; d->p = 0;
+    d->cx0 = (s16)clipX0; d->cx1 = (s16)clipX1; d->cy0 = (s16)clipY0; d->cy1 = (s16)clipY1;
+    return d;
+}
+static const char *keepStr(const char *t) {
+    int n = strlen(t) + 1;
+    if (dPool + n > (int)sizeof dpool) { drawDirect(); return 0; }
+    char *k = &dpool[dPool]; memcpy(k, t, n); dPool += n; return k;
+}
+void drawBegin(void) { dN = 0; dPool = 0; listing = 1; }
+// A game's side panel changes a few times a second, not every frame: it's redrawn only when its
+// fingerprint (sig) differs from what this page's panel last showed. A frame that didn't draw a
+// panel (a menu, a toast's end) forgets this page's.
+static u32 panelSig[2], lineSig[2][12]; static int panelClaimed;
+u32 sigMix(u32 h, int v) { return (h ^ (u32)v) * 16777619u + 0x9E37u; }
+int panelNeeds(u32 sig) {
+    panelClaimed = 1;
+    sig = (sigMix(sigMix(sig, screen), toastOn()) | 1);
+    if (panelSig[backPage] == sig) return 0;
+    panelSig[backPage] = sig; memset(lineSig[backPage], 0, sizeof lineSig[0]); return 1;
+}
+// one line of the panel: 1 = it changed on this page, so clear its box (x, y, w, h) to colour bg
+// and draw it. Call panelNeeds first (with what never changes mid-game), each frame.
+int panelLine(int id, u32 sig, int x, int y, int w, int h, int bg) {
+    sig |= 1;
+    if (lineSig[backPage][id] == sig) return 0;
+    lineSig[backPage][id] = sig; rect(x, y, w, h, bg); return 1;
+}
+void drawDirect(void) { if (listing) playList(); pageSig[backPage] = 0; }
+void drawEnd(void) {
+    if (!panelClaimed) panelSig[backPage] = 0;
+    panelClaimed = 0;
+    if (!listing) { pageSig[backPage] = 0; backPage ^= 1; platShow(1); return; }
+    u32 h = 2166136261u;                                       // fingerprint: the list, then the words
+    const u8 *b = (const u8 *)dl; int nb = dN * (int)sizeof(DCmd);
+    for (int i = 0; i < nb; i += 4) h = (h ^ *(const u32 *)(b + i)) * 16777619u;
+    for (int i = 0; i < dPool; i++) h = (h ^ (u8)dpool[i]) * 16777619u;
+    h |= 1;
+    if (h == pageSig[backPage ^ 1]) { listing = 0; dN = 0; platShow(0); return; }   // already on screen
+    if (h != pageSig[backPage]) { playList(); pageSig[backPage] = h; }
+    listing = 0; backPage ^= 1; platShow(1);
+}
+void pset(int x, int y, int c) { DCmd *d = note(D_PSET, c); if (!d) { pset_(x, y, c); return; } d->a[0] = x; d->a[1] = y; memset(&d->a[2], 0, 16); }
+void rect(int x, int y, int w, int h, int c) { DCmd *d = note(D_RECT, c); if (!d) { rect_(x, y, w, h, c); return; } d->a[0] = x; d->a[1] = y; d->a[2] = w; d->a[3] = h; d->a[4] = d->a[5] = 0; }
+void fillScreen(int c) { DCmd *d = note(D_FILL, c); if (!d) { fillScreen_(c); return; } dN = 0; dPool = 0; d = note(D_FILL, c); memset(d->a, 0, 24); }   // (covers all before it)
+static void shape(int x, int y, int w, int h, int rl, int rr, int grad, int c) {
+    DCmd *d = note(D_SHAPE, c); if (!d) { shape_(x, y, w, h, rl, rr, grad, c); return; }
+    d->a[0] = x; d->a[1] = y; d->a[2] = w; d->a[3] = h; d->a[4] = rl; d->a[5] = rr; d->n = (u8)grad;
+}
+void text(int x, int y, const char *t, int col, int sc) {
+    const char *k = listing ? keepStr(t) : 0;
+    DCmd *d = note(D_TEXT, col); if (!d) { glyphs(x, y, t, col, sc); return; }
+    d->a[0] = x; d->a[1] = y; memset(&d->a[2], 0, 16); d->n = (u8)sc; d->p = k;
+}
+void textS(int x, int y, const char *t, int col) {
+    const char *k = listing ? keepStr(t) : 0;
+    DCmd *d = note(D_TEXTS, col); if (!d) { textS_(x, y, t, col); return; }
+    d->a[0] = x; d->a[1] = y; memset(&d->a[2], 0, 16); d->p = k;
+}
+void drawImg(const u8 *img, int w, int h, int x, int y) { DCmd *d = note(D_IMG, 0); if (!d) { drawImg_(img, w, h, x, y); return; } d->a[0] = w; d->a[1] = h; d->a[2] = x; d->a[3] = y; d->a[4] = d->a[5] = 0; d->p = img; }
+void stipple(int x, int y, int w, int h, int c) { DCmd *d = note(D_STIP, c); if (!d) { stipple_(x, y, w, h, c); return; } d->a[0] = x; d->a[1] = y; d->a[2] = w; d->a[3] = h; d->a[4] = d->a[5] = 0; }
+void powerMarker(int x0, int y0, float ux, float uy, float len, float power) {
+    DCmd *d = note(D_POWER, 0); if (!d) { powerMarker_(x0, y0, ux, uy, len, power); return; }
+    float f[4] = { ux, uy, len, power }; d->a[0] = x0; d->a[1] = y0; memcpy(&d->a[2], f, 16);
 }

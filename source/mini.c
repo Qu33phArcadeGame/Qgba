@@ -413,6 +413,7 @@ void drawMini(void) {
     if (shakeT > 0 && screen == S_MINI) shY = (int)((frand() - 0.5f) * shakeAmt * (shakeT / 0.42f) * 0.5f * MINIT_S);
     // the table (a shake jolts it up and down), then the panel: a row at a time, by DMA
     for (int y = 0; y < SH; y++) {
+        drawDirect();
         int sy = y - shY; if (sy < 0) sy = 0; if (sy >= MINIT_H) sy = MINIT_H - 1;
         copy32(&page[y * (SW / 2)], &minit8[sy * TW], TW / 4);
         fill32(&page[y * (SW / 2) + TW / 2], C_PANEL * 0x01010101u, (SW - TW) / 4);

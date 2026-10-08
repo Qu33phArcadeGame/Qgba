@@ -431,6 +431,7 @@ static void drawPanel(void) {
     clipAll();
 }
 static void drawLaneAndPlay(void) {
+    drawDirect();
     for (int y = 0; y < SH; y++) {                         // the lane, then the panel
         copy32(&page[y * (SW / 2)], &bwl8[y * BWL_W], BWL_W / 4);
         fill32(&page[y * (SW / 2) + BWL_W / 2], C_PANEL * 0x01010101u, (SW - BWL_W) / 4);
